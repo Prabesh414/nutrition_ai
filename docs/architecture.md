@@ -22,8 +22,8 @@ The system follows a modern decoupled client-server architecture:
         SQLAlchemy (ORM) |             |             | REST API / SDK
                          v             |             v
               +----------+---------+   |   +---------+---------+
-              | PostgreSQL Database|   |   |   Gemini/LLM API  |
-              |   (User & Log Data)|   |   | (Nutrition Chatbot|
+              | PostgreSQL Database|   |   |   Ollama Local    |
+              |   (User & Log Data)|   |   |   LLM Service     |
               +--------------------+   v   +-------------------+
                              +---------+---------+
                              |     Scikit-Learn  |
@@ -59,6 +59,6 @@ The system follows a modern decoupled client-server architecture:
 - **Role:** Processes user profile metrics (BMR, goals, preferences) and applies content-based filtering or clustering to generate personalized diet plans.
 - **Core Algorithms:** Cosine Similarity, K-Means Clustering for food categorization.
 
-### 5. Chatbot Service (LLM Integration)
+### 5. Chatbot Service (Ollama Local LLM Integration)
 - **Role:** Provides interactive nutritional advice.
-- **Approach:** Integrates an LLM (e.g., Google Gemini API or OpenAI) with system prompting tailored for healthy living advice.
+- **Approach:** Integrates a locally hosted LLM (e.g. Llama 3 or Phi-3 via Ollama) with system prompting tailored for healthy living advice.
