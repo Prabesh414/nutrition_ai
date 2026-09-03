@@ -1,6 +1,7 @@
 import os
+from datetime import datetime
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, inspect, text
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
 from dotenv import load_dotenv
 
@@ -20,53 +21,53 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    profile = relationship("Profile", back_populates="user", uselist=False)
-    meals = relationship("MealLog", back_populates="user")
+    profile: Mapped["Profile | None"] = relationship(back_populates="user", uselist=False)
+    meals: Mapped[list["MealLog"]] = relationship(back_populates="user")
 
 
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-    age = Column(Integer, default=0)
-    gender = Column(String, default="Male")
-    height = Column(Float, default=0.0)
-    weight = Column(Float, default=0.0)
-    activity_level = Column(String, default="Moderately Active")
-    fitness_goal = Column(String, default="Maintain Weight")
-    dietary_preference = Column(String, default="None")
-    profile_image_url = Column(String, default="")
-    bmi = Column(Float, default=0.0)
-    bmr = Column(Float, default=0.0)
-    target_calories = Column(Float, default=0.0)
-    target_protein = Column(Float, default=0.0)
-    target_carbs = Column(Float, default=0.0)
-    target_fat = Column(Float, default=0.0)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
+    age: Mapped[int] = mapped_column(Integer, default=0)
+    gender: Mapped[str] = mapped_column(String, default="Male")
+    height: Mapped[float] = mapped_column(Float, default=0.0)
+    weight: Mapped[float] = mapped_column(Float, default=0.0)
+    activity_level: Mapped[str] = mapped_column(String, default="Moderately Active")
+    fitness_goal: Mapped[str] = mapped_column(String, default="Maintain Weight")
+    dietary_preference: Mapped[str] = mapped_column(String, default="None")
+    profile_image_url: Mapped[str] = mapped_column(String, default="")
+    bmi: Mapped[float] = mapped_column(Float, default=0.0)
+    bmr: Mapped[float] = mapped_column(Float, default=0.0)
+    target_calories: Mapped[float] = mapped_column(Float, default=0.0)
+    target_protein: Mapped[float] = mapped_column(Float, default=0.0)
+    target_carbs: Mapped[float] = mapped_column(Float, default=0.0)
+    target_fat: Mapped[float] = mapped_column(Float, default=0.0)
 
-    user = relationship("User", back_populates="profile")
+    user: Mapped[User] = relationship(back_populates="profile")
 
 
 class MealLog(Base):
     __tablename__ = "meal_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    quantity = Column(Float, default=1.0)
-    meal_type = Column(String, default="Breakfast")
-    calories = Column(Float, default=0.0)
-    protein = Column(Float, default=0.0)
-    carbs = Column(Float, default=0.0)
-    fat = Column(Float, default=0.0)
-    logged_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, default=1.0)
+    meal_type: Mapped[str] = mapped_column(String, default="Breakfast")
+    calories: Mapped[float] = mapped_column(Float, default=0.0)
+    protein: Mapped[float] = mapped_column(Float, default=0.0)
+    carbs: Mapped[float] = mapped_column(Float, default=0.0)
+    fat: Mapped[float] = mapped_column(Float, default=0.0)
+    logged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User", back_populates="meals")
+    user: Mapped[User] = relationship(back_populates="meals")
 
 
 def get_db():
