@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -176,7 +177,7 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
             carbs=meal.carbs,
             fat=meal.fat,
         )
-        for meal in sorted(user.meals, key=lambda meal: meal.logged_at, reverse=True)
+        for meal in sorted(user.meals, key=lambda meal: meal.logged_at or datetime.min, reverse=True)
     ]
 
     return UserResponse(id=user.id, email=user.email, profile=profile_payload, meals=meals)
