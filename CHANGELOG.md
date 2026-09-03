@@ -4,6 +4,20 @@ This document tracks changes, documentation additions, and configuration updates
 
 ---
 
+## [Profile Access, Clock, and Usage Tracking Update] - 2026-09-02
+
+### Added
+- **Social-style profile access**: A profile/avatar button was added to the top-right corner of the app so users can open a dedicated profile view from the main navigation.
+- **Live clock display**: A real-time clock was added to the top-right area of the app to support daily activity awareness and give the interface a more polished social-style feel.
+- **Usage/token tracker**: A lightweight usage monitor was added to estimate AI coaching consumption based on prompts and meal-tracking activity within the session.
+- **Profile detail view**: A dedicated profile page displays key health metrics, goals, and app usage in a cleaner layout.
+
+### Changed
+- **[README.md](README.md)**: Updated to include the new profile access workflow, live time functionality, and usage tracking overview.
+- **Frontend navigation flow**: The dashboard navigation now supports a profile toggle while preserving the existing nutrition dashboard and AI coach experience.
+
+---
+
 ## [Initial Setup & Documentation Update] - 2026-08-10
 
 ### Added

@@ -45,6 +45,9 @@ This project addresses this problem by developing a system that combines user he
 ### User Authentication
 Users can register, log in, and securely manage their accounts.
 
+### Social-Style Profile Access
+Users can access a profile view from the top-right avatar area, similar to social platforms such as Instagram or Facebook. This provides quick access to personal health details and usage information without leaving the dashboard flow.
+
 ### Health Profile
 Users can provide age, gender, height, weight, activity level, fitness goal, and dietary preference.
 
@@ -60,8 +63,14 @@ Leverages a machine learning model to recommend meals based on user targets.
 ### Meal Tracking & Progress Dashboard
 Record daily meals and view progress charts reflecting nutrition goals vs. intake.
 
+### Live Clock / Time Context
+A live time display is included in the top navigation so users can track the current time while reviewing daily nutrition goals and activity.
+
 ### AI Nutrition Chatbot
 Provides conversational nutritional assistance, drawing context from food logs and profiles.
+
+### Usage & Token Tracker
+The app includes a lightweight usage monitor to estimate AI consumption for coaching prompts and daily activity within the session.
 
 ---
 

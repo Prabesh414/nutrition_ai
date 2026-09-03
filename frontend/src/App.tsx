@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 
 const MOCK_FOODS = [
@@ -20,6 +20,7 @@ interface HealthProfile {
   activityLevel: 'Sedentary' | 'Lightly Active' | 'Moderately Active' | 'Very Active';
   fitnessGoal: 'Lose Weight' | 'Maintain Weight' | 'Gain Weight';
   dietaryPreference: 'None' | 'Vegetarian' | 'Vegan' | 'Keto';
+  profileImageUrl?: string;
   bmi: number;
   bmr: number;
   targetCalories: number;
@@ -51,6 +52,23 @@ function App() {
   // Authentication State
   const [user, setUser] = useState<{ email: string; profile: HealthProfile | null } | null>(null);
   const [activeModal, setActiveModal] = useState<'login' | 'signup' | 'profile' | null>(null);
+  const [activeProfileView, setActiveProfileView] = useState<'dashboard' | 'profile'>('dashboard');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [usageEstimate, setUsageEstimate] = useState({ prompts: 0, tokens: 0 });
+  const [uploadedProfileImage, setUploadedProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (uploadedProfileImage?.startsWith('blob:')) {
+        URL.revokeObjectURL(uploadedProfileImage);
+      }
+    };
+  }, [uploadedProfileImage]);
 
   // Form Fields
   const [authEmail, setAuthEmail] = useState('');
@@ -109,29 +127,57 @@ function App() {
     setActiveModal('signup');
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (authEmail && authPassword) {
-      setUser({
-        email: authEmail,
-        profile: {
-          age: 25,
-          gender: 'Male',
-          height: 175,
-          weight: 70,
-          activityLevel: 'Moderately Active',
-          fitnessGoal: 'Maintain Weight',
-          dietaryPreference: 'None',
-          bmi: 22.9,
-          bmr: 1680,
-          targetCalories: 2100,
-          targetProtein: 131,
-          targetCarbs: 236,
-          targetFat: 70
-        }
+    if (!authEmail || !authPassword) return;
+
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
       });
+
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.detail || 'Login failed');
+        return;
+      }
+
+      const profile = data.profile ? {
+        age: data.profile.age,
+        gender: data.profile.gender,
+        height: data.profile.height,
+        weight: data.profile.weight,
+        activityLevel: data.profile.activity_level,
+        fitnessGoal: data.profile.fitness_goal,
+        dietaryPreference: data.profile.dietary_preference,
+        profileImageUrl: data.profile.profile_image_url || undefined,
+        bmi: data.profile.bmi,
+        bmr: data.profile.bmr,
+        targetCalories: data.profile.target_calories,
+        targetProtein: data.profile.target_protein,
+        targetCarbs: data.profile.target_carbs,
+        targetFat: data.profile.target_fat
+      } : null;
+
+      const meals = (data.meals || []).map((meal: any) => ({
+        name: meal.name,
+        quantity: meal.quantity,
+        mealType: meal.meal_type,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+      }));
+
+      setUser({ email: data.email, profile });
+      setTrackedMeals(meals);
+      setUploadedProfileImage(data.profile?.profile_image_url || null);
       setActiveModal(null);
       setActiveDashboardTab('overview');
+    } catch (error) {
+      alert('Unable to connect to backend. Start the FastAPI server first.');
     }
   };
 
@@ -142,7 +188,7 @@ function App() {
     }
   };
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const heightInMeters = height / 100;
     const bmi = parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
@@ -172,27 +218,80 @@ function App() {
     const targetCarbs = Math.round((targetCalories * 0.50) / 4);
     const targetFat = Math.round((targetCalories * 0.25) / 9);
 
-    setUser({
-      email: authEmail,
-      profile: {
-        age,
-        gender,
-        height,
-        weight,
-        activityLevel: activity,
-        fitnessGoal: goal,
-        dietaryPreference: diet,
-        bmi,
-        bmr,
-        targetCalories,
-        targetProtein,
-        targetCarbs,
-        targetFat
-      }
-    });
+    try {
+      const registerResponse = await fetch('http://localhost:8000/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail, password: authPassword })
+      });
 
-    setActiveModal(null);
-    setActiveDashboardTab('overview');
+      const registerData = await registerResponse.json();
+      if (!registerResponse.ok) {
+        if (registerData.detail === 'User already exists') {
+          alert('This email is already registered. Please log in instead.');
+          setActiveModal('login');
+          return;
+        }
+        alert(registerData.detail || 'Registration failed');
+        return;
+      }
+
+      const profileResponse = await fetch('http://localhost:8000/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: authEmail,
+          age,
+          gender,
+          height,
+          weight,
+          activity_level: activity,
+          fitness_goal: goal,
+          dietary_preference: diet,
+          bmi,
+          bmr,
+          target_calories: targetCalories,
+          target_protein: targetProtein,
+          target_carbs: targetCarbs,
+          target_fat: targetFat
+        })
+      });
+
+      const profileData = await profileResponse.json();
+      if (!profileResponse.ok) {
+        alert(profileData.detail || 'Profile save failed');
+        return;
+      }
+
+      setUser({
+        email: authEmail,
+        profile: {
+          age: profileData.age,
+          gender: profileData.gender,
+          height: profileData.height,
+          weight: profileData.weight,
+          activityLevel: profileData.activity_level,
+          fitnessGoal: profileData.fitness_goal,
+          dietaryPreference: profileData.dietary_preference,
+          profileImageUrl: profileData.profile_image_url || undefined,
+          bmi: profileData.bmi,
+          bmr: profileData.bmr,
+          targetCalories: profileData.target_calories,
+          targetProtein: profileData.target_protein,
+          targetCarbs: profileData.target_carbs,
+          targetFat: profileData.target_fat
+        }
+      });
+
+      if (profileData.profile_image_url) {
+        setUploadedProfileImage(profileData.profile_image_url);
+      }
+
+      setActiveModal(null);
+      setActiveDashboardTab('overview');
+    } catch (error) {
+      alert('Unable to connect to backend. Start the FastAPI server first.');
+    }
   };
 
   const handleLogout = () => {
@@ -201,7 +300,123 @@ function App() {
     setSelectedFood(null);
     setLogFoodQuery('');
     setLogFoodResults([]);
+    setUsageEstimate({ prompts: 0, tokens: 0 });
+    setUploadedProfileImage(null);
     setActiveSection('home');
+    setActiveProfileView('dashboard');
+  };
+
+  const maleProfileAsset = new URL('./assets/png/male.png', import.meta.url).href;
+  const femaleProfileAsset = new URL('./assets/png/woman.png', import.meta.url).href;
+
+  const defaultProfileImage = user?.profile?.gender === 'Female'
+    ? femaleProfileAsset
+    : maleProfileAsset;
+
+  const activeProfileImage = uploadedProfileImage || user?.profile?.profileImageUrl || defaultProfileImage;
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      event.target.value = '';
+      return;
+    }
+
+    const readAsDataUrl = new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Could not read file'));
+      reader.readAsDataURL(file);
+    });
+
+    try {
+      const dataUrl = await readAsDataUrl;
+      setUploadedProfileImage(dataUrl);
+
+      if (!user) {
+        event.target.value = '';
+        return;
+      }
+
+      const currentProfile = user.profile ?? {
+        age,
+        gender,
+        height,
+        weight,
+        activityLevel: activity,
+        fitnessGoal: goal,
+        dietaryPreference: diet,
+        bmi: 0,
+        bmr: 0,
+        targetCalories: 0,
+        targetProtein: 0,
+        targetCarbs: 0,
+        targetFat: 0
+      };
+
+      const payload = {
+        email: user.email,
+        age: currentProfile.age,
+        gender: currentProfile.gender,
+        height: currentProfile.height,
+        weight: currentProfile.weight,
+        activity_level: currentProfile.activityLevel,
+        fitness_goal: currentProfile.fitnessGoal,
+        dietary_preference: currentProfile.dietaryPreference,
+        profile_image_url: dataUrl,
+        bmi: currentProfile.bmi,
+        bmr: currentProfile.bmr,
+        target_calories: currentProfile.targetCalories,
+        target_protein: currentProfile.targetProtein,
+        target_carbs: currentProfile.targetCarbs,
+        target_fat: currentProfile.targetFat
+      };
+
+      const response = await fetch('http://localhost:8000/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const savedProfile = await response.json();
+      if (!response.ok) {
+        alert(savedProfile.detail || 'Could not save profile image.');
+        return;
+      }
+
+      setUser(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          profile: prev.profile ? {
+            ...prev.profile,
+            profileImageUrl: savedProfile.profile_image_url || dataUrl
+          } : {
+            age: savedProfile.age,
+            gender: savedProfile.gender,
+            height: savedProfile.height,
+            weight: savedProfile.weight,
+            activityLevel: savedProfile.activity_level,
+            fitnessGoal: savedProfile.fitness_goal,
+            dietaryPreference: savedProfile.dietary_preference,
+            profileImageUrl: savedProfile.profile_image_url || dataUrl,
+            bmi: savedProfile.bmi,
+            bmr: savedProfile.bmr,
+            targetCalories: savedProfile.target_calories,
+            targetProtein: savedProfile.target_protein,
+            targetCarbs: savedProfile.target_carbs,
+            targetFat: savedProfile.target_fat
+          }
+        };
+      });
+    } catch (error) {
+      alert('Unable to save your profile picture.');
+    }
+
+    event.target.value = '';
   };
 
   // Log meals logic
@@ -223,9 +438,9 @@ function App() {
     setLogFoodResults([]);
   };
 
-  const handleLogMealSubmit = (e: React.FormEvent) => {
+  const handleLogMealSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFood) return;
+    if (!selectedFood || !user) return;
 
     const newLog: LoggedMeal = {
       name: selectedFood.name,
@@ -237,10 +452,44 @@ function App() {
       fat: Math.round(selectedFood.fat * mealQty)
     };
 
-    setTrackedMeals([...trackedMeals, newLog]);
-    setSelectedFood(null);
-    setLogFoodQuery('');
-    setMealQty(1);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: newLog.name,
+          quantity: newLog.quantity,
+          meal_type: newLog.mealType,
+          calories: newLog.calories,
+          protein: newLog.protein,
+          carbs: newLog.carbs,
+          fat: newLog.fat
+        })
+      });
+
+      const mealsData = await response.json();
+      if (!response.ok) {
+        alert(mealsData.detail || 'Unable to save meal.');
+        return;
+      }
+
+      setTrackedMeals(mealsData.map((meal: any) => ({
+        name: meal.name,
+        quantity: meal.quantity,
+        mealType: meal.meal_type,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fat: meal.fat,
+      })));
+      setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
+      setSelectedFood(null);
+      setLogFoodQuery('');
+      setMealQty(1);
+    } catch (error) {
+      alert('Unable to save meal. Start the backend server first.');
+    }
   };
 
   const handleRemoveLoggedMeal = (idx: number) => {
@@ -255,6 +504,7 @@ function App() {
     const userMsg = chatInput;
     setChatMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
     setChatInput('');
+    setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 120 }));
 
     setTimeout(() => {
       let reply = "That's an interesting question. Remember to stay hydrated and balance your macronutrients!";
@@ -294,7 +544,7 @@ function App() {
       
       {/* GLOBAL PERSISTENT HEADER NAVBAR */}
       <header className="navbar">
-        <div className="brand" onClick={handleLogout} style={{ cursor: 'pointer' }}>
+        <div className="brand" onClick={() => setActiveSection('home')} style={{ cursor: 'pointer' }}>
           Nutrition<span className="brand-dot">AI</span>
         </div>
         
@@ -351,7 +601,15 @@ function App() {
             </>
           ) : (
             <>
-              <span className="user-email">{user.email}</span>
+              <div className="live-clock" aria-live="polite">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </div>
+              <div className="profile-avatar-menu">
+                <button className="profile-avatar-button" onClick={() => setActiveProfileView(activeProfileView === 'profile' ? 'dashboard' : 'profile')}>
+                  <img src={activeProfileImage} alt="Profile" className="profile-avatar-image" />
+                  <span className="profile-avatar-label">{user.email.split('@')[0]}</span>
+                </button>
+              </div>
               <button className="btn-flat-secondary" onClick={handleLogout} style={{ padding: '0.5rem 1.2rem', fontSize: '0.85rem' }}>Log Out</button>
             </>
           )}
@@ -479,7 +737,98 @@ function App() {
       ) : (
         /* LOGGED IN USER DASHBOARD */
         <div className="dashboard-container">
-          {activeDashboardTab === 'overview' ? (
+          {activeProfileView === 'profile' ? (
+            <div className="profile-page">
+              <div className="dashboard-card profile-header-card">
+                <div className="profile-header-top">
+                  <div className="profile-avatar-region">
+                    <div className="profile-avatar-large-wrap">
+                      <img src={activeProfileImage} alt="Profile" className="profile-avatar-large" />
+                    </div>
+                    <label className="upload-photo-button" title="Upload profile photo">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden-upload-input"
+                        onChange={handleAvatarUpload}
+                      />
+                      <span>Upload Photo</span>
+                    </label>
+                  </div>
+                  <div>
+                    <p className="profile-kicker">Your Profile</p>
+                    <h2>{user?.email}</h2>
+                  </div>
+                </div>
+                <div className="profile-mini-grid">
+                  <div className="mini-stat">
+                    <span>Age:</span>
+                    <strong>{user?.profile?.age ?? 0}</strong>
+                  </div>
+                  <div className="mini-stat">
+                    <span>Height:</span>
+                    <strong>{user?.profile?.height ?? 0} cm</strong>
+                  </div>
+                  <div className="mini-stat">
+                    <span>Weight:</span>
+                    <strong>{user?.profile?.weight ?? 0} kg</strong>
+                  </div>
+                  <div className="mini-stat">
+                    <span>Goal:</span>
+                    <strong>{user?.profile?.fitnessGoal ?? 'Set a goal'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-grid">
+                <div className="dashboard-card profile-detail-card">
+                  <h3>Health Snapshot</h3>
+                  <ul className="profile-detail-list">
+                    <li><span>BMI:</span><strong>{user?.profile?.bmi ?? 0}</strong></li>
+                    <li><span>BMR:</span><strong>{user?.profile?.bmr ?? 0} kcal</strong></li>
+                    <li><span>Activity:</span><strong>{user?.profile?.activityLevel ?? 'Not set'}</strong></li>
+                    <li><span>Diet:</span><strong>{user?.profile?.dietaryPreference ?? 'Not set'}</strong></li>
+                    <li><span>Target Calories:</span><strong>{user?.profile?.targetCalories ?? 0} kcal</strong></li>
+                    <li><span>Target Protein:</span><strong>{user?.profile?.targetProtein ?? 0} g</strong></li>
+                  </ul>
+                </div>
+
+                <div className="dashboard-card usage-card">
+                  <h3>Usage & Token Tracker</h3>
+                  <div className="usage-meter-wrap">
+                    <div className="usage-header-row">
+                      <span>AI Coach Usage</span>
+                      <strong>{usageEstimate.tokens} / 2000</strong>
+                    </div>
+                    <div className="usage-meter-bg">
+                      <div className="usage-meter-fill" style={{ width: `${Math.min((usageEstimate.tokens / 2000) * 100, 100)}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="usage-note">
+                    A lightweight estimate of AI usage based on nutrition coach prompts and meal tracking activity during the current session.
+                  </div>
+                  <div className="usage-summary-grid">
+                    <div className="usage-tile">
+                      <span>Coach Prompts</span>
+                      <strong>{usageEstimate.prompts}</strong>
+                    </div>
+                    <div className="usage-tile">
+                      <span>Estimated Tokens</span>
+                      <strong>{usageEstimate.tokens}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-card profile-action-card">
+                <h3>Profile Actions</h3>
+                <div className="profile-actions-row">
+                  <button className="btn-flat-primary" onClick={() => setActiveProfileView('dashboard')}>Back to Dashboard</button>
+                  <button className="btn-flat-secondary" onClick={() => setActiveDashboardTab('coach')}>Open AI Coach</button>
+                </div>
+              </div>
+            </div>
+          ) : activeDashboardTab === 'overview' ? (
             <div className="dashboard-grid">
               <div className="dashboard-left">
                 <div className="dashboard-card profile-metrics-card">

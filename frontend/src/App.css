@@ -11,6 +11,217 @@
   padding-top: 72px;
 }
 
+.live-clock {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08rem;
+  color: var(--earth);
+  background: rgba(115, 87, 62, 0.08);
+  border: 1px solid var(--stone);
+  border-radius: 999px;
+  padding: 0.5rem 0.8rem;
+}
+
+.profile-avatar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--stone);
+  background: var(--warm-white);
+  color: var(--bark);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem 0.35rem 0.45rem;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.profile-avatar-button:hover {
+  border-color: var(--rust);
+  transform: translateY(-1px);
+}
+
+.profile-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bark), var(--rust));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.profile-avatar-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.profile-avatar-image,
+.profile-avatar-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.profile-avatar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--stone);
+  background: var(--warm-white);
+  color: var(--bark);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.profile-avatar-button .profile-avatar-image {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(107, 76, 56, 0.12);
+  background: #f5efe8;
+}
+
+.profile-avatar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--earth);
+}
+
+.avatar-upload-trigger,
+.profile-image-upload {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--stone);
+  background: var(--warm-white);
+  color: var(--bark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(90, 74, 62, 0.08);
+}
+
+.hidden-upload-input {
+  display: none;
+}
+
+.profile-avatar-region {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-avatar-large-wrap {
+  width: 4.5rem;
+  height: 4.5rem;
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(107, 76, 56, 0.12);
+  background: #f5efe8;
+}
+
+.profile-avatar-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.upload-photo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bark);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.upload-photo-button:hover {
+  background: var(--rust);
+}
+
+.profile-header-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.profile-header-top {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.profile-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.mini-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(115, 87, 62, 0.05);
+  border: 1px solid var(--stone);
+  border-radius: 8px;
+  padding: 0.8rem 0.95rem;
+}
+
+.mini-stat span,
+.profile-detail-list span {
+  color: var(--earth);
+  font-weight: 500;
+}
+
+.mini-stat strong,
+.profile-detail-list strong {
+  color: var(--bark);
+  font-weight: 700;
+}
+
+.profile-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.profile-detail-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(115, 87, 62, 0.1);
+}
+
+.profile-detail-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 /* ---- NAVBAR ---- */
 .navbar {
   position: fixed;
