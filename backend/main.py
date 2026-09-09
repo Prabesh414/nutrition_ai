@@ -7,10 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.database import MealLog, Profile, User, create_tables, ensure_meal_logs_table, ensure_profile_image_column, get_db
+from backend.database import MealLog, Profile, User, create_tables, ensure_meal_logs_table, ensure_name_columns, ensure_profile_image_column, ensure_username_column, get_db
 
 
 class RegisterRequest(BaseModel):
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
     email: str
     password: str
 
@@ -79,6 +82,10 @@ class MealLogResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     email: str
     profile: Optional[ProfileResponse] = None
     meals: list[MealLogResponse] = []
@@ -97,6 +104,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"^https?://(?:localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[0-1])\.\d+\.\d+):5173$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -107,6 +115,8 @@ app.add_middleware(
 def startup_event():
     create_tables()
     ensure_profile_image_column()
+    ensure_username_column()
+    ensure_name_columns()
     ensure_meal_logs_table()
 
 
@@ -125,13 +135,29 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    user = User(email=payload.email.lower(), password_hash=hash_password(payload.password))
+    first_name = payload.first_name.strip()
+    middle_name = (payload.middle_name or '').strip() or None
+    last_name = payload.last_name.strip()
+    if not first_name or not last_name:
+        raise HTTPException(status_code=400, detail="First name and last name are required")
+
+    user = User(
+        first_name=first_name,
+        middle_name=middle_name,
+        last_name=last_name,
+        email=payload.email.lower(),
+        password_hash=hash_password(payload.password),
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
 
     return UserResponse(
         id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        middle_name=user.middle_name,
+        last_name=user.last_name,
         email=user.email,
         profile=None,
     )
@@ -180,7 +206,16 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
         for meal in sorted(user.meals, key=lambda meal: meal.logged_at or datetime.min, reverse=True)
     ]
 
-    return UserResponse(id=user.id, email=user.email, profile=profile_payload, meals=meals)
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        middle_name=user.middle_name,
+        last_name=user.last_name,
+        email=user.email,
+        profile=profile_payload,
+        meals=meals,
+    )
 
 
 @app.put("/api/v1/profile", response_model=ProfileResponse)

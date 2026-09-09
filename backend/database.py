@@ -22,6 +22,10 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    username: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    middle_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String, nullable=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -93,6 +97,34 @@ def ensure_profile_image_column():
             connection.execute(
                 text("ALTER TABLE profiles ADD COLUMN profile_image_url VARCHAR DEFAULT ''")
             )
+
+
+def ensure_username_column():
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    if 'username' not in columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN username VARCHAR")
+            )
+            connection.execute(
+                text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)")
+            )
+
+
+def ensure_name_columns():
+    inspector = inspect(engine)
+    if 'users' not in inspector.get_table_names():
+        return
+
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    with engine.begin() as connection:
+        for column in ('first_name', 'middle_name', 'last_name'):
+            if column not in columns:
+                connection.execute(text(f"ALTER TABLE users ADD COLUMN {column} VARCHAR"))
 
 
 def ensure_meal_logs_table():
