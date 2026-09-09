@@ -237,6 +237,7 @@
   background-color: var(--cream);
   border-bottom: 1px solid var(--stone);
   box-sizing: border-box;
+  animation: page-header-in 700ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 @media (max-width: 768px) {
@@ -244,13 +245,19 @@
 }
 
 .brand {
+  border: 0;
+  padding: 0;
+  background: transparent;
   font-family: var(--font-display);
   font-size: 1.45rem;
   color: var(--bark);
   letter-spacing: -0.3px;
-  cursor: pointer;
+  cursor: pointer !important;
   user-select: none;
 }
+
+.brand:hover,
+.brand:focus-visible { color: var(--bark); cursor: pointer !important; }
 
 .brand-dot { color: var(--rust); }
 
@@ -334,13 +341,30 @@
   position: relative;
   width: 100%;
   height: calc(100vh - 72px);
-  background-image: url('/landingpage.png');
+  background-color: var(--sand);
   background-size: cover;
   background-position: 20% center;
   background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  animation: page-surface-in 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both;
+}
+
+.hero-food-image {
+  position: absolute;
+  inset: 0;
+  background-position: 20% center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  animation: hero-food-image-in 900ms ease-in-out both;
+}
+
+.hero-food-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(45, 33, 24, 0.12);
 }
 
 .content-overlay {
@@ -354,6 +378,7 @@
   backdrop-filter: blur(6px);
   border-radius: 4px;
   margin-left: 5rem;
+  animation: page-content-in 950ms cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
 }
 
 @media (max-width: 900px) {
@@ -392,14 +417,160 @@
   margin-top: 0.25rem;
 }
 
+.nutrition-pulse-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 4rem;
+  align-items: center;
+  padding: 5rem max(5rem, 8vw);
+  background: var(--sand);
+  border-top: 1px solid var(--stone);
+  animation: page-section-in 1000ms cubic-bezier(0.22, 0.61, 0.36, 1) 520ms both;
+}
+
+.pulse-copy { max-width: 460px; }
+
+.pulse-foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1.75rem;
+}
+
+.pulse-food-button {
+  border: 1px solid var(--stone);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: var(--warm-white);
+  color: var(--earth);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.pulse-food-button:hover,
+.pulse-food-button.selected {
+  background: var(--bark);
+  border-color: var(--bark);
+  color: var(--warm-white);
+  transform: translateY(-2px);
+}
+
+.discovery-tabs .pulse-food-button { text-align: left; }
+
+.pulse-panel {
+  padding: 1.75rem;
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 4px;
+  box-shadow: 12px 12px 0 rgba(184, 80, 54, 0.12);
+}
+
+.discovery-content {
+  position: relative;
+  animation: discovery-fade 500ms ease-in-out both;
+}
+
+.pulse-panel-header,
+.pulse-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pulse-panel-header {
+  color: var(--rust);
+  font-size: 0.76rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pulse-panel-header strong { color: var(--bark); font-size: 0.9rem; }
+.pulse-panel h3 { margin: 1.5rem 0 1.25rem; font-family: var(--font-display); font-size: 1.7rem; }
+.pulse-bars { display: grid; gap: 1rem; }
+.discovery-panel h3 { margin-bottom: 0.8rem; }
+.discovery-description { color: var(--earth); max-width: 34rem; }
+.discovery-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--stone);
+  color: var(--earth);
+  font-size: 0.8rem;
+}
+.discovery-detail strong { color: var(--bark); font-weight: 600; text-align: right; }
+.pulse-bar-row { color: var(--earth); font-size: 0.82rem; }
+.pulse-bar-row > span { width: 4.2rem; }
+.pulse-bar-row > strong { width: 2.5rem; text-align: right; color: var(--bark); }
+.pulse-bar { height: 7px; flex: 1; overflow: hidden; background: var(--sand); border-radius: 999px; }
+.pulse-bar i { display: block; height: 100%; background: var(--rust); border-radius: inherit; transition: width 0.45s ease; }
+
+@keyframes page-header-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-surface-in {
+  from { opacity: 0.78; }
+  to { opacity: 1; }
+}
+
+@keyframes page-content-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-section-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes discovery-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hero-food-image-in {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-food-image,
+  .navbar,
+  .landing-container,
+  .content-overlay,
+  .nutrition-pulse-section,
+  .discovery-content,
+  .pulse-food-button {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 800px) {
+  .nutrition-pulse-section { grid-template-columns: 1fr; gap: 2.5rem; padding: 3.5rem 1.5rem; }
+  .pulse-panel { min-width: 0; }
+}
+
 /* ---- SEARCH SECTION ---- */
 .search-section {
+  position: relative;
   padding: 5rem;
   border-top: 1px solid var(--stone);
   display: flex;
   flex-direction: column;
   align-items: center;
   background-color: var(--cream);
+  background-image:
+    linear-gradient(90deg, rgba(250, 247, 242, 0.97) 0%, rgba(250, 247, 242, 0.9) 48%, rgba(250, 247, 242, 0.74) 100%),
+    url('https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=2000&q=80');
+  background-position: center;
+  background-size: cover;
 }
 
 @media (max-width: 768px) { .search-section { padding: 3rem 1.5rem; } }
@@ -518,9 +689,15 @@
 
 /* ---- FEATURES SECTION ---- */
 .features-section {
+  position: relative;
   padding: 5rem;
   border-top: 1px solid var(--stone);
   background-color: var(--sand);
+  background-image:
+    linear-gradient(rgba(237, 232, 223, 0.88), rgba(237, 232, 223, 0.88)),
+    url('https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=2000&q=80');
+  background-position: center;
+  background-size: cover;
 }
 
 @media (max-width: 768px) { .features-section { padding: 3rem 1.5rem; } }
