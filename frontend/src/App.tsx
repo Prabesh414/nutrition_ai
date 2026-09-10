@@ -218,7 +218,16 @@ function App() {
     lastName?: string;
     email: string;
     profile: HealthProfile | null;
-  } | null>(null);
+  } | null>(() => {
+    const saved = localStorage.getItem('nutrition_ai_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // Dashboard Tracker state
+  const [trackedMeals, setTrackedMeals] = useState<LoggedMeal[]>(() => {
+    const saved = localStorage.getItem('nutrition_ai_meals');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [activeModal, setActiveModal] = useState<'login' | 'signup' | 'profile' | null>(null);
   const [activeProfileView, setActiveProfileView] = useState<'dashboard' | 'profile'>('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -252,6 +261,21 @@ function App() {
     };
   }, [uploadedProfileImage]);
 
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('nutrition_ai_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('nutrition_ai_user');
+      localStorage.removeItem('nutrition_ai_meals');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('nutrition_ai_meals', JSON.stringify(trackedMeals));
+    }
+  }, [trackedMeals, user]);
+
   // Form Fields
   const [authFirstName, setAuthFirstName] = useState('');
   const [authMiddleName, setAuthMiddleName] = useState('');
@@ -267,9 +291,6 @@ function App() {
   const [activity, setActivity] = useState<HealthProfile['activityLevel']>('Moderately Active');
   const [goal, setGoal] = useState<HealthProfile['fitnessGoal']>('Maintain Weight');
   const [diet, setDiet] = useState<HealthProfile['dietaryPreference']>('None');
-
-  // Dashboard Tracker state
-  const [trackedMeals, setTrackedMeals] = useState<LoggedMeal[]>([]);
   
   // Custom Food Log Input state
   const [logFoodQuery, setLogFoodQuery] = useState('');
@@ -316,7 +337,12 @@ function App() {
   };
 
   const handleLogoClick = () => {
-    window.location.reload();
+    if (user) {
+      setActiveProfileView('dashboard');
+      setActiveDashboardTab('overview');
+    } else {
+      setActiveSection('home');
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
