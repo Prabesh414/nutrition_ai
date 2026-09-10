@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, inspect, text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, create_engine, inspect, text
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship, sessionmaker
 from sqlalchemy.sql import func
 from dotenv import load_dotenv
@@ -125,10 +125,3 @@ def ensure_name_columns():
         for column in ('first_name', 'middle_name', 'last_name'):
             if column not in columns:
                 connection.execute(text(f"ALTER TABLE users ADD COLUMN {column} VARCHAR"))
-
-
-def ensure_meal_logs_table():
-    Base.metadata.create_all(bind=engine)
-    inspector = inspect(engine)
-    if 'meal_logs' not in inspector.get_table_names():
-        return

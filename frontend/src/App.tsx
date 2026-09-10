@@ -157,6 +157,45 @@ interface LoggedMeal {
   fat: number;
 }
 
+function mapBackendProfileToFrontend(profile: any): HealthProfile | null {
+  if (!profile) return null;
+  return {
+    age: profile.age,
+    gender: profile.gender,
+    height: profile.height,
+    weight: profile.weight,
+    activityLevel: profile.activity_level,
+    fitnessGoal: profile.fitness_goal,
+    dietaryPreference: profile.dietary_preference,
+    profileImageUrl: profile.profile_image_url || undefined,
+    bmi: profile.bmi,
+    bmr: profile.bmr,
+    targetCalories: profile.target_calories,
+    targetProtein: profile.target_protein,
+    targetCarbs: profile.target_carbs,
+    targetFat: profile.target_fat
+  };
+}
+
+function mapBackendMealToFrontend(meal: any): LoggedMeal {
+  return {
+    name: meal.name,
+    quantity: meal.quantity,
+    mealType: meal.meal_type,
+    calories: meal.calories,
+    protein: meal.protein,
+    carbs: meal.carbs,
+    fat: meal.fat,
+  };
+}
+
+function searchFoods(query: string): typeof MOCK_FOODS {
+  if (!query.trim()) return [];
+  return MOCK_FOODS.filter(food =>
+    food.name.toLowerCase().includes(query.toLowerCase())
+  );
+}
+
 function App() {
   // Navigation & Page Tab State
   const [activeSection, setActiveSection] = useState<'home' | 'search' | 'features'>('home');
@@ -253,10 +292,7 @@ function App() {
       setSearched(false);
       return;
     }
-    const filtered = MOCK_FOODS.filter(food =>
-      food.name.toLowerCase().includes(query.toLowerCase())
-    );
-    setSearchResults(filtered);
+    setSearchResults(searchFoods(query));
     setSearched(true);
   };
 
@@ -300,32 +336,8 @@ function App() {
         return;
       }
 
-      const profile = data.profile ? {
-        age: data.profile.age,
-        gender: data.profile.gender,
-        height: data.profile.height,
-        weight: data.profile.weight,
-        activityLevel: data.profile.activity_level,
-        fitnessGoal: data.profile.fitness_goal,
-        dietaryPreference: data.profile.dietary_preference,
-        profileImageUrl: data.profile.profile_image_url || undefined,
-        bmi: data.profile.bmi,
-        bmr: data.profile.bmr,
-        targetCalories: data.profile.target_calories,
-        targetProtein: data.profile.target_protein,
-        targetCarbs: data.profile.target_carbs,
-        targetFat: data.profile.target_fat
-      } : null;
-
-      const meals = (data.meals || []).map((meal: any) => ({
-        name: meal.name,
-        quantity: meal.quantity,
-        mealType: meal.meal_type,
-        calories: meal.calories,
-        protein: meal.protein,
-        carbs: meal.carbs,
-        fat: meal.fat,
-      }));
+      const profile = mapBackendProfileToFrontend(data.profile);
+      const meals = (data.meals || []).map(mapBackendMealToFrontend);
 
       setUser({
         username: data.username || undefined,
@@ -341,6 +353,7 @@ function App() {
       setActiveModal(null);
       setActiveDashboardTab('overview');
     } catch (error) {
+      console.error(error);
       alert('Unable to connect to backend. Start the FastAPI server first.');
     }
   };
@@ -438,22 +451,7 @@ function App() {
         middleName: authMiddleName || undefined,
         lastName: authLastName,
         email: authEmail,
-        profile: {
-          age: profileData.age,
-          gender: profileData.gender,
-          height: profileData.height,
-          weight: profileData.weight,
-          activityLevel: profileData.activity_level,
-          fitnessGoal: profileData.fitness_goal,
-          dietaryPreference: profileData.dietary_preference,
-          profileImageUrl: profileData.profile_image_url || undefined,
-          bmi: profileData.bmi,
-          bmr: profileData.bmr,
-          targetCalories: profileData.target_calories,
-          targetProtein: profileData.target_protein,
-          targetCarbs: profileData.target_carbs,
-          targetFat: profileData.target_fat
-        }
+        profile: mapBackendProfileToFrontend(profileData)
       });
       setShowLandingPage(false);
 
@@ -464,6 +462,7 @@ function App() {
       setActiveModal(null);
       setActiveDashboardTab('overview');
     } catch (error) {
+      console.error(error);
       alert('Unable to connect to backend. Start the FastAPI server first.');
     }
   };
@@ -565,28 +564,11 @@ function App() {
         if (!prev) return prev;
         return {
           ...prev,
-          profile: prev.profile ? {
-            ...prev.profile,
-            profileImageUrl: savedProfile.profile_image_url || dataUrl
-          } : {
-            age: savedProfile.age,
-            gender: savedProfile.gender,
-            height: savedProfile.height,
-            weight: savedProfile.weight,
-            activityLevel: savedProfile.activity_level,
-            fitnessGoal: savedProfile.fitness_goal,
-            dietaryPreference: savedProfile.dietary_preference,
-            profileImageUrl: savedProfile.profile_image_url || dataUrl,
-            bmi: savedProfile.bmi,
-            bmr: savedProfile.bmr,
-            targetCalories: savedProfile.target_calories,
-            targetProtein: savedProfile.target_protein,
-            targetCarbs: savedProfile.target_carbs,
-            targetFat: savedProfile.target_fat
-          }
+          profile: mapBackendProfileToFrontend(savedProfile)
         };
       });
     } catch (error) {
+      console.error(error);
       alert('Unable to save your profile picture.');
     }
 
@@ -596,14 +578,7 @@ function App() {
   // Log meals logic
   const handleLogFoodSearch = (val: string) => {
     setLogFoodQuery(val);
-    if (!val.trim()) {
-      setLogFoodResults([]);
-      return;
-    }
-    const filtered = MOCK_FOODS.filter(food =>
-      food.name.toLowerCase().includes(val.toLowerCase())
-    );
-    setLogFoodResults(filtered);
+    setLogFoodResults(searchFoods(val));
   };
 
   const handleSelectFoodToLog = (food: typeof MOCK_FOODS[0]) => {
@@ -648,20 +623,13 @@ function App() {
         return;
       }
 
-      setTrackedMeals(mealsData.map((meal: any) => ({
-        name: meal.name,
-        quantity: meal.quantity,
-        mealType: meal.meal_type,
-        calories: meal.calories,
-        protein: meal.protein,
-        carbs: meal.carbs,
-        fat: meal.fat,
-      })));
+      setTrackedMeals(mealsData.map(mapBackendMealToFrontend));
       setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
       setSelectedFood(null);
       setLogFoodQuery('');
       setMealQty(1);
     } catch (error) {
+      console.error(error);
       alert('Unable to save meal. Start the backend server first.');
     }
   };
