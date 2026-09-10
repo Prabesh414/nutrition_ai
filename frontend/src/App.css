@@ -357,7 +357,13 @@
   background-position: 20% center;
   background-size: cover;
   background-repeat: no-repeat;
-  animation: hero-food-image-in 900ms ease-in-out both;
+  opacity: 0;
+  transition: opacity 1.5s ease-in-out;
+  pointer-events: none;
+}
+
+.hero-food-image.active {
+  opacity: 1;
 }
 
 .hero-food-image::after {
@@ -378,6 +384,8 @@
   backdrop-filter: blur(6px);
   border-radius: 4px;
   margin-left: 5rem;
+  position: relative;
+  z-index: 10;
   animation: page-content-in 950ms cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
 }
 

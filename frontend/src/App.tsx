@@ -775,12 +775,14 @@ function App() {
           {activeSection === 'home' && (
           <>
             <div className="landing-container">
-              <div
-                key={heroImageIndex}
-                className="hero-food-image"
-                style={{ backgroundImage: `url(${HERO_FOOD_IMAGES[heroImageIndex]})` }}
-                aria-hidden="true"
-              />
+              {HERO_FOOD_IMAGES.map((img, idx) => (
+                <div
+                  key={idx}
+                  className={`hero-food-image ${idx === heroImageIndex ? 'active' : ''}`}
+                  style={{ backgroundImage: `url(${img})` }}
+                  aria-hidden="true"
+                />
+              ))}
               <main className="content-overlay">
                 <span className="title-badge">Personalized Health Platform</span>
                 <h1 className="main-title">
