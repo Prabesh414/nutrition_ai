@@ -717,47 +717,58 @@ function App() {
         </button>
         
         <nav className="nav-links">
-          {!user ? (
+          {/* Public landing page sections */}
+          <span 
+            className={`nav-link ${(showLandingPage || !user) && activeSection === 'home' ? 'active' : ''}`}
+            onClick={() => {
+              setShowLandingPage(true);
+              setActiveSection('home');
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            Home
+          </span>
+          <span 
+            className={`nav-link ${(showLandingPage || !user) && activeSection === 'search' ? 'active' : ''}`}
+            onClick={() => {
+              setShowLandingPage(true);
+              setActiveSection('search');
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            Search Food
+          </span>
+          <span 
+            className={`nav-link ${(showLandingPage || !user) && activeSection === 'features' ? 'active' : ''}`}
+            onClick={() => {
+              setShowLandingPage(true);
+              setActiveSection('features');
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            Features
+          </span>
+
+          {/* Logged-in specific links */}
+          {user && (
             <>
               <span 
-                className={`nav-link ${activeSection === 'home' ? 'active' : ''}`}
-                onClick={() => setActiveSection('home')}
-                style={{ cursor: 'pointer' }}
-              >
-                Home
-              </span>
-              <span 
-                className={`nav-link ${activeSection === 'search' ? 'active' : ''}`}
-                onClick={() => setActiveSection('search')}
-                style={{ cursor: 'pointer' }}
-              >
-                Search Food
-              </span>
-              <span 
-                className={`nav-link ${activeSection === 'features' ? 'active' : ''}`}
-                onClick={() => setActiveSection('features')}
-                style={{ cursor: 'pointer' }}
-              >
-                Features
-              </span>
-            </>
-          ) : (
-            <>
-              <span 
-                className={`nav-link ${activeDashboardTab === 'overview' ? 'active' : ''}`}
+                className={`nav-link ${!showLandingPage && activeDashboardTab === 'overview' ? 'active' : ''}`}
                 onClick={() => {
                   setShowLandingPage(false);
                   setActiveDashboardTab('overview');
+                  setActiveProfileView('dashboard');
                 }}
                 style={{ cursor: 'pointer' }}
               >
                 Dashboard
               </span>
               <span 
-                className={`nav-link ${activeDashboardTab === 'coach' ? 'active' : ''}`}
+                className={`nav-link ${!showLandingPage && activeDashboardTab === 'coach' ? 'active' : ''}`}
                 onClick={() => {
                   setShowLandingPage(false);
                   setActiveDashboardTab('coach');
+                  setActiveProfileView('dashboard');
                 }}
                 style={{ cursor: 'pointer' }}
               >
