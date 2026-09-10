@@ -7,7 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.database import MealLog, Profile, User, create_tables, ensure_meal_logs_table, ensure_name_columns, ensure_profile_image_column, ensure_username_column, get_db
+try:
+    from backend.database import MealLog, Profile, User, create_tables, ensure_name_columns, ensure_profile_image_column, ensure_username_column, get_db
+except ModuleNotFoundError:
+    from database import MealLog, Profile, User, create_tables, ensure_name_columns, ensure_profile_image_column, ensure_username_column, get_db
 
 
 class RegisterRequest(BaseModel):
@@ -117,7 +120,6 @@ def startup_event():
     ensure_profile_image_column()
     ensure_username_column()
     ensure_name_columns()
-    ensure_meal_logs_table()
 
 
 @app.get("/")
