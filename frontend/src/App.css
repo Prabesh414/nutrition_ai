@@ -1175,3 +1175,180 @@
   color: var(--sand);
   opacity: 0.7;
 }
+
+/* ---- SMART RECOMMENDATIONS CARD ---- */
+.recommendations-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header-with-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-header-with-badge h3 {
+  margin-bottom: 0;
+}
+
+.pref-badge {
+  background-color: var(--stone);
+  color: var(--bark);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+.recommendations-intro {
+  font-size: 0.85rem;
+  color: var(--earth);
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.recommendations-filter-tabs {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--stone);
+}
+
+.filter-tab-btn {
+  background: transparent;
+  border: 1px solid var(--stone);
+  color: var(--earth);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab-btn:hover {
+  background-color: var(--stone);
+  color: var(--bark);
+}
+
+.filter-tab-btn.active {
+  background-color: var(--rust);
+  border-color: var(--rust);
+  color: var(--warm-white);
+}
+
+.recommended-meals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.recommended-meal-item {
+  background-color: #fcfbf9;
+  border: 1px solid var(--stone);
+  border-radius: 6px;
+  padding: 0.85rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recommended-meal-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 76, 56, 0.06);
+  border-color: rgba(107, 76, 56, 0.2);
+}
+
+.rec-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.rec-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rec-meal-badge {
+  font-size: 0.65rem;
+  color: var(--rust);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rec-name {
+  font-size: 0.95rem;
+  color: var(--bark);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.btn-log-recommendation {
+  background-color: var(--warm-white);
+  border: 1px solid var(--rust);
+  color: var(--rust);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-log-recommendation:hover {
+  background-color: var(--rust);
+  color: var(--warm-white);
+}
+
+.rec-benefits {
+  font-size: 0.78rem;
+  color: var(--earth);
+  line-height: 1.35;
+  margin: 0.35rem 0 0.65rem 0;
+  font-style: italic;
+}
+
+.rec-macros-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rec-macro-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+}
+
+.rec-macro-pill.cal-pill {
+  background-color: rgba(186, 104, 73, 0.08);
+  color: var(--rust);
+}
+
+.rec-macro-pill.prot-pill {
+  background-color: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+}
+
+.rec-macro-pill.carb-pill {
+  background-color: rgba(156, 39, 176, 0.08);
+  color: #7b1fa2;
+}
+
+.rec-macro-pill.fat-pill {
+  background-color: rgba(230, 81, 0, 0.08);
+  color: #e65100;
+}

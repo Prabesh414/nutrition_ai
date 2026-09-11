@@ -189,6 +189,129 @@ function mapBackendMealToFrontend(meal: any): LoggedMeal {
   };
 }
 
+export interface RecommendedFood {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mealType: string;
+  benefits: string;
+}
+
+/**
+ * Computes smart personalized diet recommendations based on user's dietary preferences and fitness goals.
+ * TODO (ML Integration Phase): Currently, this function returns profile-driven rules-based recommendations.
+ * Once the ML model is trained (K-Nearest Neighbors / Cosine Similarity model from docs/ml_model.md),
+ * this will fetch dynamically from GET /api/v1/recommendations endpoint, backed by live machine learning inference.
+ */
+export function getSmartRecommendations(diet: string, goal: string): RecommendedFood[] {
+  const normalizedDiet = (diet || 'None').toLowerCase();
+  const normalizedGoal = (goal || 'Maintain Weight').toLowerCase();
+
+  const recommendations: Record<string, Record<string, RecommendedFood[]>> = {
+    none: {
+      lose: [
+        { name: 'Grilled Chicken Breast with Broccoli', calories: 230, protein: 36, carbs: 12, fat: 4.5, mealType: 'Lunch', benefits: 'Lean protein to maintain muscle while on a calorie deficit.' },
+        { name: 'Boiled Eggs (2) with Fresh Spinach', calories: 175, protein: 14, carbs: 4, fat: 11, mealType: 'Breakfast', benefits: 'Healthy fats to keep you satiated in the morning.' },
+        { name: 'Baked Salmon with Grilled Zucchini', calories: 220, protein: 23, carbs: 4, fat: 13, mealType: 'Dinner', benefits: 'High in Omega-3 fatty acids for cardiovascular health.' },
+        { name: 'Sliced Cucumber with Hummus (2 tbsp)', calories: 95, protein: 4, carbs: 8, fat: 5, mealType: 'Snack', benefits: 'Low calorie, refreshing snack rich in fiber.' }
+      ],
+      gain: [
+        { name: 'Salmon Filet with Brown Rice (1.5 cups)', calories: 530, protein: 38, carbs: 68, fat: 15, mealType: 'Dinner', benefits: 'Calorie-dense, clean carbohydrates and healthy fats for muscle building.' },
+        { name: 'Peanut Butter (2 tbsp) & Oats with Banana', calories: 445, protein: 15, carbs: 61, fat: 19, mealType: 'Breakfast', benefits: 'Perfect high-calorie pre-workout energy boost.' },
+        { name: 'Chicken Tikka with Whole Wheat Naan', calories: 450, protein: 36, carbs: 49, fat: 12, mealType: 'Lunch', benefits: 'Excellent protein-to-carb balance for recovery after resistance training.' },
+        { name: 'Mixed Almonds & Cashews (50g)', calories: 320, protein: 11, carbs: 15, fat: 26, mealType: 'Snack', benefits: 'Convenient, nutrient-dense fats for hitting calorie targets.' }
+      ],
+      maintain: [
+        { name: 'Turkey Breast Sandwich on Whole Wheat', calories: 375, protein: 34, carbs: 32, fat: 14, mealType: 'Lunch', benefits: 'Sustained energy release with clean protein and complex carbs.' },
+        { name: 'Greek Yogurt with Honey & Blueberries', calories: 220, protein: 16, carbs: 28, fat: 4.5, mealType: 'Breakfast', benefits: 'Rich in probiotics and antioxidants for digestive wellness.' },
+        { name: 'Tuna Salad with Quinoa (1 cup)', calories: 350, protein: 32, carbs: 39, fat: 8, mealType: 'Dinner', benefits: 'Perfect macro balance to support regular activity levels.' },
+        { name: 'Apple slices with Peanut Butter (1 tbsp)', calories: 190, protein: 4.5, carbs: 28, fat: 8, mealType: 'Snack', benefits: 'Fibers and fats combination that keeps blood sugar stable.' }
+      ]
+    },
+    vegetarian: {
+      lose: [
+        { name: 'Tofu Stir-fry with Mushrooms & Spinach', calories: 250, protein: 28, carbs: 8, fat: 14, mealType: 'Lunch', benefits: 'Low-glycemic-index plant proteins for fat burn support.' },
+        { name: 'Moong Dal Chilla (2) with low-fat paneer', calories: 290, protein: 18, carbs: 32, fat: 8, mealType: 'Breakfast', benefits: 'Traditional high-protein, gluten-free Indian breakfast.' },
+        { name: 'Cottage Cheese with Pineapple & Berries', calories: 230, protein: 28, carbs: 14, fat: 9, mealType: 'Dinner', benefits: 'Slow-digesting casein protein prevents muscle breakdown overnight.' },
+        { name: 'Roasted Chickpeas (1/2 cup)', calories: 135, protein: 7, carbs: 22, fat: 2, mealType: 'Snack', benefits: 'Crunchy, fiber-rich snack to satisfy savory cravings.' }
+      ],
+      gain: [
+        { name: 'Paneer Tikka with Quinoa (1 cup cooked)', calories: 620, protein: 35, carbs: 45, fat: 33, mealType: 'Dinner', benefits: 'Protein-packed dairy source rich in essential minerals.' },
+        { name: 'Chana Masala with Butter Naan', calories: 680, protein: 21, carbs: 87, fat: 15, mealType: 'Lunch', benefits: 'Hearty legumes and carbs to support muscle building.' },
+        { name: 'Oatmeal with Milk, Chia Seeds, and Walnuts', calories: 470, protein: 17, carbs: 48, fat: 23, mealType: 'Breakfast', benefits: 'Calorie-rich complex grains and essential Omega-3s.' },
+        { name: 'Peanut Butter Toast with Banana', calories: 450, protein: 16, carbs: 55, fat: 20, mealType: 'Snack', benefits: 'Fast loading calories with healthy amino acid profile.' }
+      ],
+      maintain: [
+        { name: 'Lentil Dal with Brown Rice & Ghee', calories: 490, protein: 23, carbs: 90, fat: 7.4, mealType: 'Dinner', benefits: 'Classic complete protein profile with clean amino acids.' },
+        { name: 'Greek Yogurt with Chia Seeds & Sliced Apple', calories: 260, protein: 18, carbs: 25, fat: 9, mealType: 'Breakfast', benefits: 'Excellent gut-supporting breakfast loaded with calcium.' },
+        { name: 'Paneer Wrap on Whole Wheat with Veggies', calories: 425, protein: 22, carbs: 34, fat: 20, mealType: 'Lunch', benefits: 'High satiety lunch containing colorful anti-inflammatory vegetables.' },
+        { name: 'Mixed Pistachios & Walnuts (30g)', calories: 175, protein: 5, carbs: 6, fat: 15, mealType: 'Snack', benefits: 'Heart-healthy fats and minerals for steady energy levels.' }
+      ]
+    },
+    vegan: {
+      lose: [
+        { name: 'Baked Tempeh with Asparagus & Mushrooms', calories: 235, protein: 22, carbs: 10, fat: 11, mealType: 'Dinner', benefits: 'Fermented plant protein source with excellent bioavailability.' },
+        { name: 'Black Beans (1 cup) with Half Avocado', calories: 387, protein: 17, carbs: 50, fat: 15, mealType: 'Lunch', benefits: 'Fibers, minerals, and healthy fats that promote vascular health.' },
+        { name: 'Tofu Scramble with Turmeric & Kale', calories: 180, protein: 16, carbs: 7, fat: 10, mealType: 'Breakfast', benefits: 'Rich in anti-inflammatory antioxidants and calcium.' },
+        { name: 'Boiled Edamame (1 cup with pods)', calories: 188, protein: 18, carbs: 14, fat: 8, mealType: 'Snack', benefits: 'Perfect snack high in plant-based complete protein.' }
+      ],
+      gain: [
+        { name: 'Lentils with Quinoa & Avocado', calories: 568, protein: 35, carbs: 99, fat: 17, mealType: 'Lunch', benefits: 'Incredible plant-based energy powerhouse loaded with iron.' },
+        { name: 'Chia Seed Pudding with Dates & Almond Butter', calories: 480, protein: 12, carbs: 45, fat: 28, mealType: 'Breakfast', benefits: 'Extremely dense nutrients and omega fats to fuel weight gain.' },
+        { name: 'Tempeh Stir-fry with Sweet Potato & Peanut Sauce', calories: 520, protein: 28, carbs: 55, fat: 22, mealType: 'Dinner', benefits: 'High calories, high iron, and complete proteins.' },
+        { name: 'Protein Shake (Pea-Rice Blend) with Banana & Oats', calories: 390, protein: 30, carbs: 54, fat: 6, mealType: 'Snack', benefits: 'Rapidly absorbed vegan proteins and glycogen replenishment.' }
+      ],
+      maintain: [
+        { name: 'Chickpea Salad with Cucumber, Olives & Quinoa', calories: 435, protein: 23, carbs: 59, fat: 13, mealType: 'Lunch', benefits: 'Mediterranean-style heart-healthy lunch supporting metabolism.' },
+        { name: 'Oatmeal in Soy Milk with Blueberries & Chia', calories: 310, protein: 13, carbs: 48, fat: 8, mealType: 'Breakfast', benefits: 'Fiber beta-glucans help maintain normal cholesterol levels.' },
+        { name: 'Amaranth Porridge with Coconut Milk & Guava', calories: 395, protein: 11, carbs: 62, fat: 12, mealType: 'Dinner', benefits: 'Traditional ancient grains packed with essential amino acids.' },
+        { name: 'Hummus (1/4 cup) with Whole Wheat Pita Bread', calories: 326, protein: 12, carbs: 48, fat: 11, mealType: 'Snack', benefits: 'Slow-digesting complex carbohydrates for baseline focus.' }
+      ]
+    },
+    keto: {
+      lose: [
+        { name: 'Avocado Salad with Feta Cheese & Olive Oil', calories: 310, protein: 7, carbs: 9, fat: 28, mealType: 'Lunch', benefits: 'Pure ketogenic fuel loaded with essential electrolytes.' },
+        { name: 'Boiled Eggs (2) with Butter Spinach', calories: 225, protein: 13, carbs: 2, fat: 18, mealType: 'Breakfast', benefits: 'Zero carb breakfast high in essential choline.' },
+        { name: 'Sardines in Olive Oil with Cucumber', calories: 248, protein: 25, carbs: 2, fat: 15, mealType: 'Dinner', benefits: 'Calcium and calcium-supporting Vitamin D rich seafood.' },
+        { name: 'Celery Sticks with Almond Butter (1 tbsp)', calories: 110, protein: 3, carbs: 4, fat: 9, mealType: 'Snack', benefits: 'Crispy low-carb fat-fuel snack to control hunger.' }
+      ],
+      gain: [
+        { name: 'Salmon baked in Olive Oil with Avocado', calories: 630, protein: 35, carbs: 12, fat: 49, mealType: 'Dinner', benefits: 'High fat, high protein meal that easily induces ketosis.' },
+        { name: 'Paneer cooked in Ghee with Almonds', calories: 590, protein: 29, carbs: 9, fat: 48, mealType: 'Lunch', benefits: 'Calorie dense, high fat content to keep ketones high.' },
+        { name: 'Bulletproof Coffee & 3 Fried Eggs in Butter', calories: 510, protein: 18, carbs: 1.5, fat: 48, mealType: 'Breakfast', benefits: 'Instant MCT/fat source for high mental clarity.' },
+        { name: 'Walnuts & Macadamia Nuts (50g)', calories: 355, protein: 6, carbs: 7, fat: 35, mealType: 'Snack', benefits: 'Ultra low-carb dense nuts for easy calorie buffering.' }
+      ],
+      maintain: [
+        { name: 'Tuna Salad with Mayo & Avocado on Spinach', calories: 410, protein: 31, carbs: 5, fat: 30, mealType: 'Lunch', benefits: 'Clean high protein, high fat ketogenic option.' },
+        { name: 'Full Fat Greek Yogurt with Walnuts & Chia', calories: 320, protein: 18, carbs: 10, fat: 23, mealType: 'Breakfast', benefits: 'Calcium and protein loaded breakfast with low carb counts.' },
+        { name: 'Chicken Breast cooked in Coconut Oil with Broccoli', calories: 360, protein: 35, carbs: 6, fat: 22, mealType: 'Dinner', benefits: 'Medium-chain triglycerides support direct fat metabolism.' },
+        { name: 'Pistachios (30g)', calories: 160, protein: 6, carbs: 8, fat: 13, mealType: 'Snack', benefits: 'Ketogenic mineral-rich snack to keep electrolyte balance.' }
+      ]
+    }
+  };
+
+  const dietKey = normalizedDiet === 'none' || !recommendations[normalizedDiet] ? 'none' : normalizedDiet;
+  const goalMap: Record<string, string> = {
+    'lose weight': 'lose',
+    'gain weight': 'gain',
+    'maintain weight': 'maintain',
+    'lose': 'lose',
+    'gain': 'gain',
+    'maintain': 'maintain'
+  };
+  const goalKey = goalMap[normalizedGoal] || 'maintain';
+
+  return recommendations[dietKey][goalKey] || recommendations['none']['maintain'];
+}
+
+/**
+ * Searches for foods matching the query.
+ * TODO (ML Integration Phase): In production, this client-side mockup will be replaced
+ * by an API call querying the actual SQLite/PostgreSQL Food Dataset (seeded via backend/seed.py).
+ * Endpoint: GET /api/v1/foods?query=...
+ */
 function searchFoods(query: string): typeof MOCK_FOODS {
   if (!query.trim()) return [];
   return MOCK_FOODS.filter(food =>
@@ -298,6 +421,7 @@ function App() {
   const [selectedFood, setSelectedFood] = useState<typeof MOCK_FOODS[0] | null>(null);
   const [mealQty, setMealQty] = useState(1);
   const [mealType, setMealType] = useState('Breakfast');
+  const [recommendationFilter, setRecommendationFilter] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('All');
 
   // Chatbot state
   const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'coach'; text: string }[]>([
@@ -662,6 +786,52 @@ function App() {
 
   const handleRemoveLoggedMeal = (idx: number) => {
     setTrackedMeals(trackedMeals.filter((_, i) => i !== idx));
+  };
+
+  const handleLogRecommendedMeal = async (food: RecommendedFood) => {
+    if (!user) return;
+
+    const payload = {
+      email: user.email,
+      name: food.name,
+      quantity: 1.0,
+      meal_type: food.mealType,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/meals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const mealsData = await response.json();
+      if (!response.ok) {
+        alert(mealsData.detail || 'Unable to save meal.');
+        return;
+      }
+
+      setTrackedMeals(mealsData.map(mapBackendMealToFrontend));
+      setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
+    } catch (error) {
+      console.error(error);
+      // Fallback for offline mode or server issues
+      const offlineMeal: LoggedMeal = {
+        name: food.name,
+        quantity: 1.0,
+        mealType: food.mealType,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat
+      };
+      setTrackedMeals(prev => [offlineMeal, ...prev]);
+      setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
+    }
   };
 
   // Chatbot logic
@@ -1212,7 +1382,66 @@ function App() {
               </div>
 
               <div className="dashboard-right">
-                <div className="dashboard-card meal-history-card" style={{ height: '100%' }}>
+                <div className="dashboard-card recommendations-card">
+                  <div className="card-header-with-badge">
+                    <h3>Smart Diet Recommendations</h3>
+                    <span className="pref-badge">
+                      {user.profile?.dietaryPreference || 'None'} • {user.profile?.fitnessGoal || 'Maintain'}
+                    </span>
+                  </div>
+                  <p className="recommendations-intro">
+                    Tailored dishes matching your macro-targets. Click <strong>+ Log</strong> to add directly.
+                  </p>
+
+                  <div className="recommendations-filter-tabs">
+                    {(['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        type="button"
+                        className={`filter-tab-btn ${recommendationFilter === tab ? 'active' : ''}`}
+                        onClick={() => setRecommendationFilter(tab)}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="recommended-meals-list">
+                    {getSmartRecommendations(user.profile?.dietaryPreference || 'None', user.profile?.fitnessGoal || 'Maintain Weight')
+                      .filter(item => recommendationFilter === 'All' || item.mealType === recommendationFilter)
+                      .map((food, idx) => (
+                        <div key={idx} className="recommended-meal-item">
+                          <div className="rec-item-header">
+                            <div className="rec-title-wrap">
+                              <span className="rec-meal-badge">{food.mealType}</span>
+                              <strong className="rec-name">{food.name}</strong>
+                            </div>
+                            <button 
+                              type="button" 
+                              className="btn-log-recommendation" 
+                              onClick={() => handleLogRecommendedMeal(food)}
+                              title="Log this meal"
+                            >
+                              + Log
+                            </button>
+                          </div>
+                          <p className="rec-benefits">{food.benefits}</p>
+                          <div className="rec-macros-row">
+                            <span className="rec-macro-pill cal-pill">{food.calories} kcal</span>
+                            <span className="rec-macro-pill prot-pill">P: {food.protein}g</span>
+                            <span className="rec-macro-pill carb-pill">C: {food.carbs}g</span>
+                            <span className="rec-macro-pill fat-pill">F: {food.fat}g</span>
+                          </div>
+                        </div>
+                      ))}
+                    {getSmartRecommendations(user.profile?.dietaryPreference || 'None', user.profile?.fitnessGoal || 'Maintain Weight')
+                      .filter(item => recommendationFilter === 'All' || item.mealType === recommendationFilter).length === 0 && (
+                      <p className="empty-logs-text">No recommendations found for meal type: {recommendationFilter}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="dashboard-card meal-history-card">
                   <h3>Today's Meal Log</h3>
                   {trackedMeals.length > 0 ? (
                     <div className="logged-meals-list">

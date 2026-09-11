@@ -2,10 +2,13 @@
   "name": "nutrition-ai",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
-    "start": "npm --prefix frontend run dev",
+    "dev": "concurrently \"python -m uvicorn backend.main:app --reload\" \"npm --prefix frontend run dev\"",
+    "start": "npm run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
     "preview": "npm --prefix frontend run preview"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }
