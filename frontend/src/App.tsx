@@ -422,6 +422,7 @@ function App() {
   const [mealQty, setMealQty] = useState(1);
   const [mealType, setMealType] = useState('Breakfast');
   const [recommendationFilter, setRecommendationFilter] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('All');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Chatbot state
   const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'coach'; text: string }[]>([
@@ -834,6 +835,96 @@ function App() {
     }
   };
 
+  const startEditingProfile = () => {
+    if (user?.profile) {
+      setAge(user.profile.age);
+      setGender(user.profile.gender);
+      setHeight(user.profile.height);
+      setWeight(user.profile.weight);
+      setActivity(user.profile.activityLevel);
+      setGoal(user.profile.fitnessGoal);
+      setDiet(user.profile.dietaryPreference);
+    }
+    setIsEditingProfile(true);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    const heightInMeters = height / 100;
+    const bmi = parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
+
+    let bmr = 0;
+    if (gender === 'Male') {
+      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+    }
+    bmr = Math.round(bmr);
+
+    const activityMultipliers = {
+      'Sedentary': 1.2,
+      'Lightly Active': 1.375,
+      'Moderately Active': 1.55,
+      'Very Active': 1.725
+    };
+    const tdee = bmr * activityMultipliers[activity];
+
+    let targetCalories = tdee;
+    if (goal === 'Lose Weight') targetCalories -= 500;
+    if (goal === 'Gain Weight') targetCalories += 500;
+    targetCalories = Math.round(targetCalories);
+
+    const targetProtein = Math.round((targetCalories * 0.25) / 4);
+    const targetCarbs = Math.round((targetCalories * 0.50) / 4);
+    const targetFat = Math.round((targetCalories * 0.25) / 9);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          age,
+          gender,
+          height,
+          weight,
+          activity_level: activity,
+          fitness_goal: goal,
+          dietary_preference: diet,
+          profile_image_url: uploadedProfileImage || user.profile?.profileImageUrl || null,
+          bmi,
+          bmr,
+          target_calories: targetCalories,
+          target_protein: targetProtein,
+          target_carbs: targetCarbs,
+          target_fat: targetFat
+        })
+      });
+
+      const profileData = await response.json();
+      if (!response.ok) {
+        alert(profileData.detail || 'Profile update failed');
+        return;
+      }
+
+      setUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          profile: mapBackendProfileToFrontend(profileData)
+        };
+      });
+
+      setIsEditingProfile(false);
+      alert('Your health profile has been successfully updated!');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to connect to server. Unable to update profile.');
+    }
+  };
+
   // Chatbot logic
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1185,15 +1276,129 @@ function App() {
 
               <div className="profile-grid">
                 <div className="dashboard-card profile-detail-card">
-                  <h3>Health Snapshot</h3>
-                  <ul className="profile-detail-list">
-                    <li><span>BMI:</span><strong>{user?.profile?.bmi ?? 0}</strong></li>
-                    <li><span>BMR:</span><strong>{user?.profile?.bmr ?? 0} kcal</strong></li>
-                    <li><span>Activity:</span><strong>{user?.profile?.activityLevel ?? 'Not set'}</strong></li>
-                    <li><span>Diet:</span><strong>{user?.profile?.dietaryPreference ?? 'Not set'}</strong></li>
-                    <li><span>Target Calories:</span><strong>{user?.profile?.targetCalories ?? 0} kcal</strong></li>
-                    <li><span>Target Protein:</span><strong>{user?.profile?.targetProtein ?? 0} g</strong></li>
-                  </ul>
+                  {isEditingProfile ? (
+                    <form onSubmit={handleUpdateProfile} className="profile-edit-inline-form">
+                      <h3 style={{ marginBottom: '1.25rem' }}>Edit Health Metrics</h3>
+                      <div className="profile-edit-inline-grid" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Age (years)</label>
+                          <input
+                            type="number"
+                            required
+                            className="form-input"
+                            style={{ width: '120px', padding: '0.35rem 0.6rem' }}
+                            min="10"
+                            max="100"
+                            value={age}
+                            onChange={(e) => setAge(parseInt(e.target.value) || 25)}
+                          />
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Gender</label>
+                          <select
+                            className="form-input"
+                            style={{ width: '120px', padding: '0.35rem 0.6rem' }}
+                            value={gender}
+                            onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
+                          >
+                            <option>Male</option>
+                            <option>Female</option>
+                          </select>
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Height (cm)</label>
+                          <input
+                            type="number"
+                            required
+                            className="form-input"
+                            style={{ width: '120px', padding: '0.35rem 0.6rem' }}
+                            min="100"
+                            max="250"
+                            value={height}
+                            onChange={(e) => setHeight(parseInt(e.target.value) || 175)}
+                          />
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Weight (kg)</label>
+                          <input
+                            type="number"
+                            required
+                            className="form-input"
+                            style={{ width: '120px', padding: '0.35rem 0.6rem' }}
+                            min="30"
+                            max="200"
+                            value={weight}
+                            onChange={(e) => setWeight(parseInt(e.target.value) || 70)}
+                          />
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Activity Level</label>
+                          <select
+                            className="form-input"
+                            style={{ width: '150px', padding: '0.35rem 0.6rem' }}
+                            value={activity}
+                            onChange={(e) => setActivity(e.target.value as HealthProfile['activityLevel'])}
+                          >
+                            <option>Sedentary</option>
+                            <option>Lightly Active</option>
+                            <option>Moderately Active</option>
+                            <option>Very Active</option>
+                          </select>
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Fitness Goal</label>
+                          <select
+                            className="form-input"
+                            style={{ width: '150px', padding: '0.35rem 0.6rem' }}
+                            value={goal}
+                            onChange={(e) => setGoal(e.target.value as HealthProfile['fitnessGoal'])}
+                          >
+                            <option>Lose Weight</option>
+                            <option>Maintain Weight</option>
+                            <option>Gain Weight</option>
+                          </select>
+                        </div>
+                        <div className="form-field-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--earth)' }}>Diet Preference</label>
+                          <select
+                            className="form-input"
+                            style={{ width: '150px', padding: '0.35rem 0.6rem' }}
+                            value={diet}
+                            onChange={(e) => setDiet(e.target.value as HealthProfile['dietaryPreference'])}
+                          >
+                            <option>None</option>
+                            <option>Vegetarian</option>
+                            <option>Vegan</option>
+                            <option>Keto</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="profile-edit-inline-actions" style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+                        <button type="submit" className="btn-flat-primary" style={{ flex: 1, padding: '0.45rem' }}>Save</button>
+                        <button type="button" className="btn-flat-secondary" style={{ flex: 1, padding: '0.45rem' }} onClick={() => setIsEditingProfile(false)}>Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <h3>Health Snapshot</h3>
+                      <ul className="profile-detail-list">
+                        <li><span>BMI:</span><strong>{user?.profile?.bmi ?? 0}</strong></li>
+                        <li><span>BMR:</span><strong>{user?.profile?.bmr ?? 0} kcal</strong></li>
+                        <li><span>Activity:</span><strong>{user?.profile?.activityLevel ?? 'Not set'}</strong></li>
+                        <li><span>Diet:</span><strong>{user?.profile?.dietaryPreference ?? 'Not set'}</strong></li>
+                        <li><span>Target Calories:</span><strong>{user?.profile?.targetCalories ?? 0} kcal</strong></li>
+                        <li><span>Target Protein:</span><strong>{user?.profile?.targetProtein ?? 0} g</strong></li>
+                      </ul>
+                      <button 
+                        type="button" 
+                        className="btn-flat-secondary" 
+                        style={{ width: '100%', marginTop: '1.2rem', padding: '0.5rem' }}
+                        onClick={startEditingProfile}
+                      >
+                        Edit Health Details
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 <div className="dashboard-card usage-card">
