@@ -399,6 +399,33 @@ function App() {
     }
   }, [trackedMeals, user]);
 
+  const fetchRecommendations = async (email: string) => {
+    setLoadingRecommendations(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/recommendations/${email}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendations');
+      }
+      const data = await response.json();
+      setRecommendations(data);
+    } catch (error) {
+      console.error('API Recommendations fetch failed, falling back to local model:', error);
+      if (user?.profile) {
+        setRecommendations(getSmartRecommendations(user.profile.dietaryPreference, user.profile.fitnessGoal));
+      }
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRecommendations(user.email);
+    } else {
+      setRecommendations([]);
+    }
+  }, [user]);
+
   // Form Fields
   const [authFirstName, setAuthFirstName] = useState('');
   const [authMiddleName, setAuthMiddleName] = useState('');
@@ -423,6 +450,8 @@ function App() {
   const [mealType, setMealType] = useState('Breakfast');
   const [recommendationFilter, setRecommendationFilter] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack'>('All');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [recommendations, setRecommendations] = useState<RecommendedFood[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   // Chatbot state
   const [chatMessages, setChatMessages] = useState<{ sender: 'user' | 'coach'; text: string }[]>([
@@ -1612,34 +1641,38 @@ function App() {
                   </div>
 
                   <div className="recommended-meals-list">
-                    {getSmartRecommendations(user.profile?.dietaryPreference || 'None', user.profile?.fitnessGoal || 'Maintain Weight')
-                      .filter(item => recommendationFilter === 'All' || item.mealType === recommendationFilter)
-                      .map((food, idx) => (
-                        <div key={idx} className="recommended-meal-item">
-                          <div className="rec-item-header">
-                            <div className="rec-title-wrap">
-                              <span className="rec-meal-badge">{food.mealType}</span>
-                              <strong className="rec-name">{food.name}</strong>
+                    {loadingRecommendations ? (
+                      <p className="empty-logs-text" style={{ fontStyle: 'italic' }}>Loading personalized recommendations...</p>
+                    ) : (
+                      recommendations
+                        .filter(item => recommendationFilter === 'All' || item.mealType === recommendationFilter)
+                        .map((food, idx) => (
+                          <div key={idx} className="recommended-meal-item">
+                            <div className="rec-item-header">
+                              <div className="rec-title-wrap">
+                                <span className="rec-meal-badge">{food.mealType}</span>
+                                <strong className="rec-name">{food.name}</strong>
+                              </div>
+                              <button 
+                                type="button" 
+                                className="btn-log-recommendation" 
+                                onClick={() => handleLogRecommendedMeal(food)}
+                                title="Log this meal"
+                              >
+                                + Log
+                              </button>
                             </div>
-                            <button 
-                              type="button" 
-                              className="btn-log-recommendation" 
-                              onClick={() => handleLogRecommendedMeal(food)}
-                              title="Log this meal"
-                            >
-                              + Log
-                            </button>
+                            <p className="rec-benefits">{food.benefits}</p>
+                            <div className="rec-macros-row">
+                              <span className="rec-macro-pill cal-pill">{food.calories} kcal</span>
+                              <span className="rec-macro-pill prot-pill">P: {food.protein}g</span>
+                              <span className="rec-macro-pill carb-pill">C: {food.carbs}g</span>
+                              <span className="rec-macro-pill fat-pill">F: {food.fat}g</span>
+                            </div>
                           </div>
-                          <p className="rec-benefits">{food.benefits}</p>
-                          <div className="rec-macros-row">
-                            <span className="rec-macro-pill cal-pill">{food.calories} kcal</span>
-                            <span className="rec-macro-pill prot-pill">P: {food.protein}g</span>
-                            <span className="rec-macro-pill carb-pill">C: {food.carbs}g</span>
-                            <span className="rec-macro-pill fat-pill">F: {food.fat}g</span>
-                          </div>
-                        </div>
-                      ))}
-                    {getSmartRecommendations(user.profile?.dietaryPreference || 'None', user.profile?.fitnessGoal || 'Maintain Weight')
+                        ))
+                    )}
+                    {!loadingRecommendations && recommendations
                       .filter(item => recommendationFilter === 'All' || item.mealType === recommendationFilter).length === 0 && (
                       <p className="empty-logs-text">No recommendations found for meal type: {recommendationFilter}</p>
                     )}
