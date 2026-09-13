@@ -191,6 +191,7 @@ function mapBackendMealToFrontend(meal: any): LoggedMeal {
 
 export interface RecommendedFood {
   name: string;
+  servingSize?: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -307,16 +308,49 @@ export function getSmartRecommendations(diet: string, goal: string): Recommended
 }
 
 /**
- * Searches for foods matching the query.
- * TODO (ML Integration Phase): In production, this client-side mockup will be replaced
- * by an API call querying the actual SQLite/PostgreSQL Food Dataset (seeded via backend/seed.py).
- * Endpoint: GET /api/v1/foods?query=...
+ * Searches for foods matching the query from the backend API.
  */
-function searchFoods(query: string): typeof MOCK_FOODS {
+async function searchFoods(query: string): Promise<(typeof MOCK_FOODS[0] & { servingSize?: string })[]> {
   if (!query.trim()) return [];
+  try {
+    const response = await fetch(`${API_BASE_URL}/foods?query=${encodeURIComponent(query)}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.map((item: any) => ({
+        name: item.name,
+        servingSize: item.serving_size,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbohydrates,
+        fat: item.fat,
+        category: item.is_vegan ? 'Vegan' : (item.is_vegetarian ? 'Vegetarian' : 'Non-Vegetarian')
+      }));
+    }
+  } catch (e) {
+    console.error('Failed to search foods, falling back to local dataset:', e);
+  }
   return MOCK_FOODS.filter(food =>
     food.name.toLowerCase().includes(query.toLowerCase())
-  );
+  ).map(item => {
+    let standardCategory = 'Non-Vegetarian';
+    const catLower = item.category.toLowerCase();
+    const nameLower = item.name.toLowerCase();
+
+    // Map mock categories to standard dietary profiles
+    if (nameLower.includes('chicken') || nameLower.includes('beef') || nameLower.includes('salmon') || nameLower.includes('sardines') || nameLower.includes('shrimp') || nameLower.includes('tuna') || nameLower.includes('turkey') || nameLower.includes('egg')) {
+      standardCategory = 'Non-Vegetarian';
+    } else if (catLower === 'fruit' || catLower === 'vegetable' || catLower === 'grains' || catLower === 'nuts & seeds' || catLower === 'legumes' || catLower === 'plant protein') {
+      standardCategory = 'Vegan';
+    } else {
+      standardCategory = 'Vegetarian';
+    }
+
+    return {
+      ...item,
+      servingSize: '1 serving',
+      category: standardCategory
+    };
+  });
 }
 
 function App() {
@@ -407,7 +441,37 @@ function App() {
         throw new Error('Failed to fetch recommendations');
       }
       const data = await response.json();
-      setRecommendations(data);
+      
+      // Map API response to RecommendedFood shape
+      const mapped: RecommendedFood[] = (data.recommendations || []).map((rec: any, idx: number) => {
+        let mealType: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' = 'Breakfast';
+        if (idx % 4 === 1) mealType = 'Lunch';
+        else if (idx % 4 === 2) mealType = 'Dinner';
+        else if (idx % 4 === 3) mealType = 'Snack';
+
+        let benefits = `Similarity match (${(rec.similarity_score * 100).toFixed(0)}%).`;
+        if (rec.protein > 15) {
+          benefits += " Rich in muscle-building protein.";
+        } else if (rec.fiber > 3) {
+          benefits += " High in beneficial dietary fiber.";
+        } else if (rec.calories < 100) {
+          benefits += " Light, calorie-conscious option.";
+        } else {
+          benefits += " Balanced macronutrient distribution.";
+        }
+
+        return {
+          name: rec.name,
+          servingSize: rec.serving_size,
+          calories: rec.calories,
+          protein: rec.protein,
+          carbs: rec.carbohydrates,
+          fat: rec.fat,
+          mealType: mealType,
+          benefits: benefits
+        };
+      });
+      setRecommendations(mapped);
     } catch (error) {
       console.error('API Recommendations fetch failed, falling back to local model:', error);
       if (user?.profile) {
@@ -418,11 +482,25 @@ function App() {
     }
   };
 
+  const fetchTrackedMeals = async (email: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/meals/${email}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTrackedMeals(data.map(mapBackendMealToFrontend));
+      }
+    } catch (error) {
+      console.error('API Meals fetch failed:', error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchRecommendations(user.email);
+      fetchTrackedMeals(user.email);
     } else {
       setRecommendations([]);
+      setTrackedMeals([]);
     }
   }, [user]);
 
@@ -460,14 +538,15 @@ function App() {
   const [chatInput, setChatInput] = useState('');
 
   // Search logic on landing page
-  const handleLandingSearch = (e: React.FormEvent) => {
+  const handleLandingSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) {
       setSearchResults([]);
       setSearched(false);
       return;
     }
-    setSearchResults(searchFoods(query));
+    const results = await searchFoods(query);
+    setSearchResults(results);
     setSearched(true);
   };
 
@@ -756,9 +835,14 @@ function App() {
   };
 
   // Log meals logic
-  const handleLogFoodSearch = (val: string) => {
+  const handleLogFoodSearch = async (val: string) => {
     setLogFoodQuery(val);
-    setLogFoodResults(searchFoods(val));
+    if (!val.trim()) {
+      setLogFoodResults([]);
+      return;
+    }
+    const results = await searchFoods(val);
+    setLogFoodResults(results);
   };
 
   const handleSelectFoodToLog = (food: typeof MOCK_FOODS[0]) => {
@@ -1193,6 +1277,7 @@ function App() {
                     <thead>
                       <tr>
                         <th>Food Item</th>
+                        <th>Serving Size</th>
                         <th>Category</th>
                         <th>Calories</th>
                         <th>Protein</th>
@@ -1204,6 +1289,7 @@ function App() {
                       {searchResults.map((food, idx) => (
                         <tr key={idx}>
                           <td className="food-name-cell">{food.name}</td>
+                          <td><span style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--charcoal)', opacity: 0.85 }}>{food.servingSize || '1 serving'}</span></td>
                           <td><span className="category-badge">{food.category}</span></td>
                           <td className="calorie-cell">{food.calories} kcal</td>
                           <td>{food.protein}g</td>
@@ -1652,6 +1738,7 @@ function App() {
                               <div className="rec-title-wrap">
                                 <span className="rec-meal-badge">{food.mealType}</span>
                                 <strong className="rec-name">{food.name}</strong>
+                                {food.servingSize && <span style={{ fontSize: '0.75rem', opacity: 0.75, fontStyle: 'italic', marginTop: '0.1rem' }}>Portion: {food.servingSize}</span>}
                               </div>
                               <button 
                                 type="button" 
