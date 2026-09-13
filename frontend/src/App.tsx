@@ -311,7 +311,6 @@ export function getSmartRecommendations(diet: string, goal: string): Recommended
  * Searches for foods matching the query from the backend API.
  */
 async function searchFoods(query: string): Promise<(typeof MOCK_FOODS[0] & { servingSize?: string })[]> {
-  if (!query.trim()) return [];
   try {
     const response = await fetch(`${API_BASE_URL}/foods?query=${encodeURIComponent(query)}`);
     if (response.ok) {
