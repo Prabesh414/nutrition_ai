@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import MealLog, Profile, User, create_tables, ensure_meal_logs_table, ensure_name_columns, ensure_profile_image_column, ensure_username_column, get_db
 from backend.recommendation import recommend_food
+from backend.ml.lstm_model import predict_next_nutrient_target
 
 
 class RegisterRequest(BaseModel):
@@ -116,6 +117,7 @@ class DailyTargets(BaseModel):
 
 class PersonalizedRecommendationsResponse(BaseModel):
     daily_targets: DailyTargets
+    lstm_predicted_targets: Optional[DailyTargets] = None
     recommendations: list[RecommendationResponse]
 
 
@@ -393,11 +395,35 @@ def get_recommendations(email: str, db: Session = Depends(get_db)):
         target_fat = profile.target_fat or 60.0
         dietary_preference = profile.dietary_preference or "None"
 
+    # Prepare historical meal sequences from the user's logged meals
+    logged_meals_list = [
+        {
+            "calories": m.calories,
+            "protein": m.protein,
+            "carbs": m.carbs,
+            "fat": m.fat,
+            "fiber": 0.0  # database MealLog does not track fiber, default to 0.0
+        }
+        for m in sorted(user.meals, key=lambda meal: meal.logged_at or datetime.min)
+    ]
+
+    baseline_targets = {
+        "calories": target_calories,
+        "protein": target_protein,
+        "carbs": target_carbs,
+        "fat": target_fat,
+        "fiber": 25.0
+    }
+
+    # Predict next meal targets using our PyTorch LSTM model
+    lstm_targets = predict_next_nutrient_target(logged_meals_list, baseline_targets)
+
+    # Recommends food matching the dynamic LSTM-predicted targets
     recs = recommend_food(
-        target_calories=target_calories,
-        target_protein=target_protein,
-        target_carbs=target_carbs,
-        target_fat=target_fat,
+        target_calories=lstm_targets["calories"],
+        target_protein=lstm_targets["protein"],
+        target_carbs=lstm_targets["carbs"],
+        target_fat=lstm_targets["fat"],
         dietary_preference=dietary_preference,
         k=12
     )
@@ -408,6 +434,12 @@ def get_recommendations(email: str, db: Session = Depends(get_db)):
             protein_g=target_protein,
             carbs_g=target_carbs,
             fat_g=target_fat
+        ),
+        lstm_predicted_targets=DailyTargets(
+            calories=lstm_targets["calories"],
+            protein_g=lstm_targets["protein"],
+            carbs_g=lstm_targets["carbs"],
+            fat_g=lstm_targets["fat"]
         ),
         recommendations=[
             RecommendationResponse(
