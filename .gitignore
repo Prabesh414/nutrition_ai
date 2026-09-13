@@ -31,3 +31,6 @@ backend/*.db
 .idea/
 .DS_Store
 Thumbs.db
+
+# Datasets
+food_dataset/
