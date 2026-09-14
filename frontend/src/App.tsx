@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import './App.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000/api/v1`;
@@ -535,6 +535,215 @@ function App() {
     { sender: 'coach', text: 'Hi! I am your AI Nutrition Coach. How can I help you reach your dietary goals today?' }
   ]);
   const [chatInput, setChatInput] = useState('');
+
+  // Floating chatbot widget state
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
+  const [floatingChatInput, setFloatingChatInput] = useState('');
+  const [floatingPos, setFloatingPos] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 85 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+
+  const floatingMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll floating chat messages to bottom
+  useEffect(() => {
+    if (isFloatingChatOpen) {
+      floatingMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isFloatingChatOpen]);
+
+  // Keep floating icon in bounds when screen is resized
+  useEffect(() => {
+    const handleResize = () => {
+      setFloatingPos(prev => {
+        const maxX = window.innerWidth - 70;
+        const maxY = window.innerHeight - 70;
+        return {
+          x: Math.min(prev.x, maxX < 0 ? 0 : maxX),
+          y: Math.min(prev.y, maxY < 0 ? 0 : maxY)
+        };
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Handle dragging with mouse
+  const handleFloatingMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+    setDragStartPos({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      
+      const minX = 10;
+      const minY = 10;
+      const maxX = window.innerWidth - 70;
+      const maxY = window.innerHeight - 70;
+      
+      setFloatingPos({
+        x: Math.max(minX, Math.min(newX, maxX)),
+        y: Math.max(minY, Math.min(newY, maxY))
+      });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setIsDragging(false);
+
+      const deltaX = Math.abs(e.clientX - dragStartPos.x);
+      const deltaY = Math.abs(e.clientY - dragStartPos.y);
+      if (deltaX < 5 && deltaY < 5) {
+        setIsFloatingChatOpen(prev => !prev);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset, dragStartPos]);
+
+  // Handle dragging with touch
+  const handleFloatingTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    setIsDragging(true);
+    setDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+    setDragStartPos({
+      x: touch.clientX,
+      y: touch.clientY
+    });
+  };
+
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      const newX = touch.clientX - dragOffset.x;
+      const newY = touch.clientY - dragOffset.y;
+      
+      const minX = 10;
+      const minY = 10;
+      const maxX = window.innerWidth - 70;
+      const maxY = window.innerHeight - 70;
+      
+      setFloatingPos({
+        x: Math.max(minX, Math.min(newX, maxX)),
+        y: Math.max(minY, Math.min(newY, maxY))
+      });
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isDragging) return;
+      setIsDragging(false);
+
+      const touch = e.changedTouches[0];
+      if (touch) {
+        const deltaX = Math.abs(touch.clientX - dragStartPos.x);
+        const deltaY = Math.abs(touch.clientY - dragStartPos.y);
+        if (deltaX < 5 && deltaY < 5) {
+          setIsFloatingChatOpen(prev => !prev);
+        }
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isDragging, dragOffset, dragStartPos]);
+
+  // Handle dynamic floating chat popup style (opens above/below or left/right depending on screen position)
+  const getFloatingPopupStyle = (): React.CSSProperties => {
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      width: '340px',
+      height: '450px',
+      pointerEvents: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 1001,
+    };
+
+    if (floatingPos.y < 500) {
+      style.top = '65px';
+    } else {
+      style.bottom = '65px';
+    }
+
+    if (floatingPos.x < 350) {
+      style.left = '0';
+    } else {
+      style.right = '0';
+    }
+
+    return style;
+  };
+
+  const handleSendFloatingMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!floatingChatInput.trim()) return;
+
+    const userMsg = floatingChatInput;
+    setChatMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
+    setFloatingChatInput('');
+    setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 120 }));
+
+    setTimeout(() => {
+      let reply = "That's an interesting question. Remember to stay hydrated and balance your macronutrients!";
+      const lower = userMsg.toLowerCase();
+
+      if (lower.includes('water') || lower.includes('hydrate')) {
+        reply = "Hydration is essential! Try to drink at least 2.5 to 3 liters of water daily, especially if you are active.";
+      } else if (lower.includes('protein')) {
+        if (user?.profile) {
+          reply = `Based on your goal to ${user.profile.fitnessGoal.toLowerCase()}, your daily target is ${user.profile.targetProtein}g of protein. Excellent sources include chicken breast, salmon, eggs, and tofu.`;
+        } else {
+          reply = "Protein is vital for muscle repair. Aim for lean meats, fish, eggs, dairy, or plant-based legumes.";
+        }
+      } else if (lower.includes('bmr') || lower.includes('bmi')) {
+        if (user?.profile) {
+          reply = `Your BMR (Basal Metabolic Rate) is ${user.profile.bmr} kcal. This is the energy your body needs to function at rest. Your current BMI is ${user.profile.bmi}.`;
+        }
+      } else if (lower.includes('calories') || lower.includes('eat')) {
+        const totalCals = trackedMeals.reduce((acc, curr) => acc + curr.calories, 0);
+        if (user?.profile) {
+          const remaining = user.profile.targetCalories - totalCals;
+          reply = `You have consumed ${totalCals} kcal today out of your ${user.profile.targetCalories} kcal budget. You have ${remaining > 0 ? remaining : 0} kcal remaining today.`;
+        }
+      }
+
+      setChatMessages(prev => [...prev, { sender: 'coach', text: reply }]);
+    }, 800);
+  };
 
   // Search logic on landing page
   const handleLandingSearch = async (e: React.FormEvent) => {
@@ -2033,6 +2242,73 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Floating Draggable AI Chatbot Widget */}
+      <div 
+        className="floating-bot-wrapper"
+        style={{
+          left: `${floatingPos.x}px`,
+          top: `${floatingPos.y}px`,
+        }}
+      >
+        <button
+          type="button"
+          className={`floating-bot-trigger ${isFloatingChatOpen ? 'active' : ''}`}
+          onMouseDown={handleFloatingMouseDown}
+          onTouchStart={handleFloatingTouchStart}
+          title="AI Nutrition Coach (Drag to move, click to chat)"
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="12" x="3" y="8" rx="2" ry="2"/>
+            <path d="M12 2v6"/>
+            <path d="M8 2h8"/>
+            <path d="M12 18v2"/>
+            <path d="M8 20h8"/>
+            <circle cx="8" cy="13" r="1"/>
+            <circle cx="16" cy="13" r="1"/>
+          </svg>
+        </button>
+
+        {isFloatingChatOpen && (
+          <div className="floating-chat-popup" style={getFloatingPopupStyle()}>
+            <div className="floating-chat-header">
+              <div className="floating-chat-title">
+                <span className="dot-active"></span>
+                AI Nutrition Coach
+              </div>
+              <button 
+                type="button" 
+                className="floating-chat-close"
+                onClick={() => setIsFloatingChatOpen(false)}
+                aria-label="Close chat"
+              >
+                ×
+              </button>
+            </div>
+            <div className="floating-chat-messages">
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className={`chat-bubble ${msg.sender === 'user' ? 'user-bubble' : 'coach-bubble'}`}>
+                  {msg.text}
+                </div>
+              ))}
+              <div ref={floatingMessagesEndRef} />
+            </div>
+            <form onSubmit={handleSendFloatingMessage} className="floating-chat-input-form">
+              <input
+                type="text"
+                className="floating-chat-input"
+                placeholder="Ask your coach anything..."
+                value={floatingChatInput}
+                onChange={(e) => setFloatingChatInput(e.target.value)}
+              />
+              <button type="submit" className="floating-chat-send-btn">
+                Send
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
 
     </div>
   );
