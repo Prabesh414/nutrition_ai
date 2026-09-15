@@ -148,6 +148,7 @@ interface HealthProfile {
 }
 
 interface LoggedMeal {
+  id?: number;
   name: string;
   quantity: number;
   mealType: string;
@@ -179,6 +180,7 @@ function mapBackendProfileToFrontend(profile: any): HealthProfile | null {
 
 function mapBackendMealToFrontend(meal: any): LoggedMeal {
   return {
+    id: meal.id,
     name: meal.name,
     quantity: meal.quantity,
     mealType: meal.meal_type,
@@ -1096,6 +1098,7 @@ function App() {
       }
 
       setTrackedMeals(mealsData.map(mapBackendMealToFrontend));
+      fetchRecommendations(user.email); // Recalculate recommendations dynamically
       setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
       setSelectedFood(null);
       setLogFoodQuery('');
@@ -1106,7 +1109,29 @@ function App() {
     }
   };
 
-  const handleRemoveLoggedMeal = (idx: number) => {
+  const handleRemoveLoggedMeal = async (idx: number) => {
+    const meal = trackedMeals[idx];
+    if (!meal || !user) return;
+
+    if (meal.id) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/meals/${meal.id}`, {
+          method: 'DELETE'
+        });
+        const mealsData = await response.json();
+        if (response.ok) {
+          setTrackedMeals(mealsData.map(mapBackendMealToFrontend));
+          fetchRecommendations(user.email); // Recalculate recommendations dynamically
+          return;
+        } else {
+          alert(mealsData.detail || 'Unable to delete meal.');
+        }
+      } catch (error) {
+        console.error('Failed to delete meal from database:', error);
+      }
+    }
+
+    // Fallback/offline behavior
     setTrackedMeals(trackedMeals.filter((_, i) => i !== idx));
   };
 
@@ -1138,6 +1163,7 @@ function App() {
       }
 
       setTrackedMeals(mealsData.map(mapBackendMealToFrontend));
+      fetchRecommendations(user.email); // Recalculate recommendations dynamically
       setUsageEstimate(prev => ({ prompts: prev.prompts + 1, tokens: prev.tokens + 50 }));
     } catch (error) {
       console.error(error);

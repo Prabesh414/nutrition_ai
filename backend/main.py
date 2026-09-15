@@ -375,6 +375,32 @@ def get_meals(email: str, db: Session = Depends(get_db)):
     ]
 
 
+@app.delete("/api/v1/meals/{meal_id}", response_model=list[MealLogResponse])
+def delete_meal(meal_id: int, db: Session = Depends(get_db)):
+    meal = db.query(MealLog).filter(MealLog.id == meal_id).first()
+    if not meal:
+        raise HTTPException(status_code=404, detail="Meal not found")
+
+    user_id = meal.user_id
+    db.delete(meal)
+    db.commit()
+
+    meals = db.query(MealLog).filter(MealLog.user_id == user_id).order_by(MealLog.logged_at.desc()).all()
+    return [
+        MealLogResponse(
+            id=item.id,
+            name=item.name,
+            quantity=item.quantity,
+            meal_type=item.meal_type,
+            calories=item.calories,
+            protein=item.protein,
+            carbs=item.carbs,
+            fat=item.fat,
+        )
+        for item in meals
+    ]
+
+
 @app.get("/api/v1/recommendations/{email}", response_model=PersonalizedRecommendationsResponse)
 def get_recommendations(email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email.lower()).first()

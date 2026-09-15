@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -104,16 +105,29 @@ def generate_synthetic_data(num_samples=200, sequence_length=3):
     return torch.tensor(np.array(X_list), dtype=torch.float32), torch.tensor(np.array(Y_list), dtype=torch.float32)
 
 
+WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "lstm_weights.pth")
+
+
 def get_trained_lstm_model() -> MealSequenceLSTM:
     """
     Trains (or retrieves cached) LSTM model on synthetic sequential datasets.
-    Training takes under 100 milliseconds and ensures the model is primed with correct sequence logic.
+    Loads pre-trained weights from disk if they exist, or trains and serializes them.
     """
     global _trained_lstm_model
     if _trained_lstm_model is not None:
         return _trained_lstm_model
         
     model = MealSequenceLSTM()
+    
+    if os.path.exists(WEIGHTS_PATH):
+        try:
+            model.load_state_dict(torch.load(WEIGHTS_PATH, weights_only=True))
+            model.eval()
+            _trained_lstm_model = model
+            return _trained_lstm_model
+        except Exception as e:
+            print(f"Error loading pre-trained LSTM weights: {e}. Retraining model...")
+            
     X, Y = generate_synthetic_data()
     
     criterion = nn.MSELoss()
@@ -127,6 +141,11 @@ def get_trained_lstm_model() -> MealSequenceLSTM:
         loss.backward()
         optimizer.step()
         
+    try:
+        torch.save(model.state_dict(), WEIGHTS_PATH)
+    except Exception as e:
+        print(f"Error serializing LSTM weights: {e}")
+
     _trained_lstm_model = model
     return _trained_lstm_model
 
