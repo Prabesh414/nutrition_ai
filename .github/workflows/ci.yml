@@ -85,8 +85,15 @@ jobs:
             echo "::error::A connection string with an embedded password is committed."
             exit 1
           fi
-          if git grep -nI 'REDACTED' -- ':!.github/*'; then
-            echo "::error::The rotated Supabase credential is still present."
+          # Generic secret shapes. Deliberately no literal from the leaked
+          # credential: an earlier version of this job hardcoded part of the
+          # password, which put it back into the tree it was meant to police.
+          # The value must be a quoted literal, so that an assignment from a
+          # function call such as `JWT_SECRET = _resolve_jwt_secret()` is not
+          # flagged.
+          if git grep -nIE '(JWT_SECRET|SECRET_KEY|API_KEY|PASSWORD)[[:space:]]*=[[:space:]]*["'"'"'][A-Za-z0-9_@#$%^&*-]{12,}["'"'"']' -- \
+              ':!*.md' ':!.github/*' ':!*.env.example' ':!.env.example' ':!tests/*'; then
+            echo "::error::A hardcoded secret is committed."
             exit 1
           fi
           echo "No credentials found in tracked source."
