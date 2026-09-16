@@ -8,9 +8,14 @@ function mockFetch(status: number, body: unknown) {
     ok: status >= 200 && status < 300,
     json: async () => body,
   } as Response;
-  const spy = vi.fn(async () => response);
+  // Typed with fetch's signature so `spy.mock.calls[n][1]` narrows to RequestInit.
+  const spy = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => response);
   vi.stubGlobal('fetch', spy);
   return spy;
+}
+
+function headersOf(init: RequestInit | undefined): Record<string, string> {
+  return (init?.headers ?? {}) as Record<string, string>;
 }
 
 describe('token storage', () => {
@@ -37,8 +42,7 @@ describe('request handling', () => {
 
     await api.listMeals();
 
-    const init = spy.mock.calls[0][1] as RequestInit;
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer my-token');
+    expect(headersOf(spy.mock.calls[0][1]).Authorization).toBe('Bearer my-token');
   });
 
   it('does not send a token to public endpoints', async () => {
@@ -47,8 +51,7 @@ describe('request handling', () => {
 
     await api.searchFoods('oats');
 
-    const init = spy.mock.calls[0][1] as RequestInit;
-    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+    expect(headersOf(spy.mock.calls[0][1]).Authorization).toBeUndefined();
   });
 
   it('clears the session and notifies on 401', async () => {
