@@ -1,152 +1,158 @@
 # Database Schema
 
-This document details the relational database design for the system, implemented in **PostgreSQL**.
+PostgreSQL in deployment, SQLite for local development and tests. Schema
+changes are managed by Alembic (`alembic/versions/`); never by hand-written
+`ALTER TABLE` at startup.
+
+```bash
+alembic upgrade head      # apply
+alembic downgrade -1      # roll back one revision
+alembic revision --autogenerate -m "describe the change"
+```
+
+---
+
+## Entity relationships
 
 ```mermaid
 erDiagram
-    USERS ||--|| HEALTH_PROFILES : "has"
-    USERS ||--o{ DAILY_LOGS : "records"
-    USERS ||--o{ CHAT_LOGS : "logs"
-    DAILY_LOGS ||--o{ LOG_ITEMS : "contains"
-    FOOD_ITEMS ||--o{ LOG_ITEMS : "logged_in"
+    USERS ||--o| PROFILES : "has one"
+    USERS ||--o{ MEAL_LOGS : "records"
+    FOOD_ITEMS ||..o{ MEAL_LOGS : "copied into"
 
     USERS {
         int id PK
+        string username UK "nullable"
+        string first_name
+        string middle_name "nullable"
+        string last_name
         string email UK
         string password_hash
-        timestamp created_at
+        timestamptz created_at
     }
 
-    HEALTH_PROFILES {
+    PROFILES {
         int id PK
-        int user_id FK
+        int user_id FK_UK
         int age
         string gender
-        float height_cm
-        float weight_kg
+        float height "cm"
+        float weight "kg"
         string activity_level
         string fitness_goal
         string dietary_preference
-        float bmr
-        float bmi
-        timestamp updated_at
+        string profile_image_url
+        float bmi "derived"
+        float bmr "derived"
+        float target_calories "derived"
+        float target_protein "derived"
+        float target_carbs "derived"
+        float target_fat "derived"
+        timestamptz updated_at
+    }
+
+    MEAL_LOGS {
+        int id PK
+        int user_id FK
+        string name
+        float quantity
+        string meal_type
+        float calories
+        float protein
+        float carbs
+        float fat
+        float fiber
+        date log_date
+        timestamptz logged_at
     }
 
     FOOD_ITEMS {
         int id PK
         string name
-        string category
-        float calories
-        float protein_g
-        float carbs_g
-        float fat_g
-        float fiber_g
         string serving_size
-    }
-
-    DAILY_LOGS {
-        int id PK
-        int user_id FK
-        date log_date
-        float total_calories
-        float total_protein
-        float total_carbs
-        float total_fat
-    }
-
-    LOG_ITEMS {
-        int id PK
-        int daily_log_id FK
-        int food_item_id FK
-        float quantity
-        string meal_type
-    }
-
-    CHAT_LOGS {
-        int id PK
-        int user_id FK
-        string message
-        string response
-        timestamp created_at
+        string region
+        float calories
+        float fat
+        float saturated_fats
+        float monounsaturated_fats
+        float polyunsaturated_fats
+        float carbohydrates
+        float sugars
+        float protein
+        float fiber
+        bool is_vegetarian
+        bool is_vegan
     }
 ```
 
-## Tables Specifications
+`FOOD_ITEMS` and `MEAL_LOGS` are linked with a dashed line because there is no
+foreign key between them: logging a meal **copies** the nutrition figures onto
+the log row. A later correction to the catalogue must not silently rewrite what
+someone recorded eating last month.
 
-### 1. `users`
-Tracks primary credentials and authentication profiles.
+---
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Unique user identifier. |
-| `email` | VARCHAR(255) | UNIQUE, NOT NULL | User's email address. |
-| `password_hash` | VARCHAR(255) | NOT NULL | Hashed password. |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Registration timestamp. |
+## Tables
 
-### 2. `health_profiles`
-Stores physical and preference details used to calculate nutritional targets.
+### `users`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Profile ID. |
-| `user_id` | INT | FOREIGN KEY, UNIQUE | Reference to `users(id)`. |
-| `age` | INT | NOT NULL | User age in years. |
-| `gender` | VARCHAR(10) | NOT NULL | "Male", "Female", or "Other". |
-| `height_cm` | FLOAT | NOT NULL | Height in centimeters. |
-| `weight_kg` | FLOAT | NOT NULL | Weight in kilograms. |
-| `activity_level` | VARCHAR(50) | NOT NULL | e.g., Sedentary, Active. |
-| `fitness_goal` | VARCHAR(50) | NOT NULL | e.g., Weight Loss, Muscle Gain. |
-| `dietary_preference`| VARCHAR(50) | NOT NULL | e.g., Vegan, Vegetarian, Keto. |
-| `bmr` | FLOAT | | Calculated Basal Metabolic Rate. |
-| `bmi` | FLOAT | | Calculated Body Mass Index. |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Last updated timestamp. |
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | `SERIAL` | primary key |
+| `username` | `VARCHAR(64)` | unique, indexed, nullable |
+| `first_name` | `VARCHAR(100)` | nullable |
+| `middle_name` | `VARCHAR(100)` | nullable |
+| `last_name` | `VARCHAR(100)` | nullable |
+| `email` | `VARCHAR(255)` | unique, indexed, not null |
+| `password_hash` | `VARCHAR(255)` | not null |
+| `created_at` | `TIMESTAMPTZ` | defaults to now |
 
-### 3. `food_items`
-Contains reference food items extracted from the Kaggle dataset.
+`password_hash` holds a bcrypt digest (cost 12). Rows created before that
+change hold an unsalted SHA-256 hex digest; those still verify and are
+rewritten as bcrypt on the user's next successful login.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Food item ID. |
-| `name` | VARCHAR(255) | NOT NULL | Name of the food item. |
-| `category` | VARCHAR(100) | | Food category/group. |
-| `calories` | FLOAT | NOT NULL | Caloric content (kcal) per serving. |
-| `protein_g` | FLOAT | NOT NULL | Protein in grams. |
-| `carbs_g` | FLOAT | NOT NULL | Carbohydrates in grams. |
-| `fat_g` | FLOAT | NOT NULL | Fats in grams. |
-| `fiber_g` | FLOAT | | Fiber in grams. |
-| `serving_size` | VARCHAR(50) | | e.g., 100g, 1 cup. |
+### `profiles`
 
-### 4. `daily_logs`
-Aggregates daily macro intake for quick historical queries.
+One row per user (`user_id` is unique). `bmi`, `bmr` and the four `target_*`
+columns are **derived**: the API recomputes them from age, gender, height,
+weight, activity level and goal on every write, so a client cannot store
+arbitrary values.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Daily log record ID. |
-| `user_id` | INT | FOREIGN KEY | Reference to `users(id)`. |
-| `log_date` | DATE | NOT NULL | Date of the log. |
-| `total_calories` | FLOAT | DEFAULT 0 | Cumulative calories tracked today. |
-| `total_protein` | FLOAT | DEFAULT 0 | Cumulative protein tracked today. |
-| `total_carbs` | FLOAT | DEFAULT 0 | Cumulative carbs tracked today. |
-| `total_fat` | FLOAT | DEFAULT 0 | Cumulative fat tracked today. |
+`profile_image_url` stores a base64 `data:` URL, capped at 512 KB by the API.
+A dedicated object store would be the right home for these; the cap exists
+because an uncapped column is returned in full on every login.
 
-### 5. `log_items`
-Stores granular entries of specific food items consumed in a meal.
+### `meal_logs`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Entry ID. |
-| `daily_log_id` | INT | FOREIGN KEY | Reference to `daily_logs(id)`. |
-| `food_item_id` | INT | FOREIGN KEY | Reference to `food_items(id)`. |
-| `quantity` | FLOAT | NOT NULL | Multiplier of the serving size. |
-| `meal_type` | VARCHAR(50) | NOT NULL | "Breakfast", "Lunch", "Dinner", "Snack". |
+| Column | Type | Notes |
+|---|---|---|
+| `log_date` | `DATE` | the calendar day the meal counts towards |
+| `logged_at` | `TIMESTAMPTZ` | when the row was written |
 
-### 6. `chat_logs`
-Logs chatbot interactions for analysis and context retention.
+Both are kept deliberately. `log_date` is the client's local calendar day and
+is what every query filters on; deriving it from a UTC timestamp puts evening
+meals on the wrong day. Indexed on `(user_id, log_date)`, which is the access
+pattern for every dashboard read.
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | SERIAL | PRIMARY KEY | Chat record ID. |
-| `user_id` | INT | FOREIGN KEY | Reference to `users(id)`. |
-| `message` | TEXT | NOT NULL | User query. |
-| `response` | TEXT | NOT NULL | AI assistant response. |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Conversation timestamp. |
+### `food_items`
+
+Seeded from `food_dataset/FOOD-DATA-GROUP*.csv` on first startup (3,292 rows
+after de-duplication). `is_vegetarian` and `is_vegan` are derived by the
+keyword classifier in `backend/food_data.py` and are indexed, since dietary
+preference filters every recommendation query.
+
+`region` is a coarse cuisine tag (`South Asian`, `East Asian`, `Western`,
+`Global`) from a name heuristic.
+
+> `serving_size` is a **display label only**. The published dataset does not
+> state a consistent portion basis, so the nutrition figures are stored exactly
+> as published and are not rescaled to this label.
+
+---
+
+## Cascades
+
+`profiles` and `meal_logs` both declare `ON DELETE CASCADE` against
+`users.id`, and the ORM relationships use `cascade="all, delete-orphan"`.
+Deleting a user removes their profile and meal history rather than leaving
+orphaned rows behind a not-null constraint.
