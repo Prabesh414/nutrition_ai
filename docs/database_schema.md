@@ -10,6 +10,31 @@ alembic downgrade -1      # roll back one revision
 alembic revision --autogenerate -m "describe the change"
 ```
 
+### Revisions
+
+| Revision | Purpose |
+|---|---|
+| `8db187d5ede7` | Baseline. Creates all four tables from nothing. |
+| `9c2f4a1b7e30` | Upgrades a legacy pre-JWT database in place. |
+
+A **fresh** database runs both in order; the second is a no-op.
+
+A database created **before 2026-09-16** already has the four tables but lacks
+`meal_logs.log_date`, `meal_logs.fiber` and `profiles.updated_at`. Running the
+baseline against it would fail on `CREATE TABLE`, so stamp it as already
+applied first:
+
+```bash
+alembic stamp 8db187d5ede7
+alembic upgrade head
+```
+
+`9c2f4a1b7e30` inspects the live schema before each step, so it is safe to
+re-run and safe against a partially-upgraded database. `log_date` is backfilled
+from `logged_at` (`logged_at::date` on PostgreSQL, `date(logged_at)` on SQLite)
+so historical meals keep the day they were recorded rather than collapsing onto
+today.
+
 ---
 
 ## Entity relationships

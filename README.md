@@ -58,7 +58,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 ### Tests
 
 ```bash
-pytest                      # 121 backend tests
+pytest                      # 136 backend tests
 cd frontend && npm test     # 18 frontend tests
 ```
 
@@ -70,6 +70,19 @@ deployed environment.
 ```bash
 alembic upgrade head
 ```
+
+**Upgrading a database created before 2026-09-16.** Such a database already has
+all four tables but is missing `meal_logs.log_date`, `meal_logs.fiber` and
+`profiles.updated_at`, so daily-scoped queries will fail against it. Tell
+Alembic the baseline is already present, then apply the rest:
+
+```bash
+alembic stamp 8db187d5ede7
+alembic upgrade head
+```
+
+Existing meals are backfilled from `logged_at`, so historical entries keep the
+day they were actually recorded. The revision is idempotent and safe to re-run.
 
 ---
 

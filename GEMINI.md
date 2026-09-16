@@ -99,7 +99,7 @@ reintroduces a specific bug.
 ## Testing
 
 ```bash
-pytest                      # backend, 121 tests
+pytest                      # backend, 136 tests
 cd frontend && npm test     # frontend, 18 tests
 ```
 
