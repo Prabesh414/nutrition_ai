@@ -32,6 +32,12 @@ NON_VEG_KEYWORDS = [
     "burger", "hamburger", "cheeseburger", "big mac", "whopper", "quarter pounder",
     "cold cut", "cold cuts", "hot dog", "corn dog", "nugget", "nuggets", "mcchicken",
     "meatloaf", "bologna", "bratwurst", "chorizo", "prosciutto", "gyro", "sloppy joe",
+    # South Asian / Nepali meat terms. The dataset carries a large set of
+    # regional dishes whose names give no hint to an English keyword list --
+    # "buff" is buffalo, "masu" is meat, "mach" is fish.
+    "buff", "buffalo", "masu", "sukuti", "sekuwa", "choila", "chhoila", "kachila",
+    "bhutuwa", "keema", "kheema", "qeema", "mach", "machh", "macher", "ilish",
+    "yak", "taas", "kaleji", "boti",
 ]
 
 # Animal-derived but not flesh -> vegetarian, not vegan.

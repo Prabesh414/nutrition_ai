@@ -27,6 +27,22 @@ from sqlalchemy.orm import Session
 
 FEATURE_COLUMNS = ["calories", "fat", "carbohydrates", "protein", "fiber"]
 
+# Final ranking blends how closely a food matches the remaining nutrient target
+# with how nutritious it is per calorie. Distance alone surfaced things like
+# bread crumbs and chocolate wafers: their raw macros sit near the target, but
+# they are poor suggestions for someone with a calorie budget to spend.
+MATCH_WEIGHT = 0.60
+QUALITY_WEIGHT = 0.40
+
+# Within the quality term: reward protein and fibre per calorie, penalise sugar.
+PROTEIN_WEIGHT = 0.45
+FIBER_WEIGHT = 0.35
+LOW_SUGAR_WEIGHT = 0.20
+
+# Retrieve a wider candidate pool by distance, then re-rank it by the blended
+# score and keep the top k.
+CANDIDATE_MULTIPLIER = 8
+
 
 @dataclass
 class _Index:
@@ -86,6 +102,33 @@ def _load_frame(db: Session, preference: str) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def _normalise(series: pd.Series) -> pd.Series:
+    """Scale a series to [0, 1]; a constant series becomes all zeros."""
+    smallest, largest = float(series.min()), float(series.max())
+    if largest - smallest < 1e-9:
+        return pd.Series(0.0, index=series.index)
+    return (series - smallest) / (largest - smallest)
+
+
+def _quality_scores(frame: pd.DataFrame) -> pd.Series:
+    """Nutrient quality per calorie, in [0, 1].
+
+    Protein and fibre per 100 kcal are rewarded and sugar per 100 kcal is
+    penalised, so a food that merely lands near the target on raw macros does
+    not outrank a genuinely better choice of the same size.
+    """
+    calories = frame["calories"].clip(lower=1.0)
+    protein_density = _normalise(frame["protein"] / calories * 100.0)
+    fiber_density = _normalise(frame["fiber"] / calories * 100.0)
+    sugar_density = _normalise(frame["sugars"] / calories * 100.0)
+
+    return (
+        PROTEIN_WEIGHT * protein_density
+        + FIBER_WEIGHT * fiber_density
+        + LOW_SUGAR_WEIGHT * (1.0 - sugar_density)
+    ).clip(0.0, 1.0)
+
+
 def _get_index(db: Session, preference: str) -> Optional[_Index]:
     """Return a cached index for this dietary slice, rebuilding if stale.
 
@@ -102,6 +145,8 @@ def _get_index(db: Session, preference: str) -> Optional[_Index]:
     frame = _load_frame(db, preference)
     if frame.empty:
         return None
+
+    frame["quality_score"] = _quality_scores(frame)
 
     scaler = MinMaxScaler()
     scaled = scaler.fit_transform(frame[FEATURE_COLUMNS])
@@ -142,7 +187,8 @@ def recommend_food(
     if index is None:
         return []
 
-    neighbours = min(max(k, 1), len(index.frame))
+    wanted = max(k, 1)
+    neighbours = min(wanted * CANDIDATE_MULTIPLIER, len(index.frame))
 
     query_vector = pd.DataFrame(
         [[target_calories, target_fat, target_carbs, target_protein, target_fiber]],
@@ -156,8 +202,18 @@ def recommend_food(
 
     distances, indices = index.model.kneighbors(scaled_target, n_neighbors=neighbours)
 
-    results = []
+    # Re-rank the retrieved candidates by match quality combined with nutrient
+    # density, then keep the requested number.
+    scored = []
     for position, distance in zip(indices[0], distances[0]):
+        match = 1.0 / (1.0 + float(distance))
+        quality = float(index.frame.iloc[position]["quality_score"])
+        scored.append((MATCH_WEIGHT * match + QUALITY_WEIGHT * quality, position))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+
+    results = []
+    for score, position in scored[:wanted]:
         row = index.frame.iloc[position]
         results.append(
             {
@@ -173,9 +229,10 @@ def recommend_food(
                 "sugars": float(row["sugars"]),
                 "is_vegetarian": bool(row["is_vegetarian"]),
                 "is_vegan": bool(row["is_vegan"]),
-                # Bounded 0-1 closeness score. Euclidean distance is unbounded,
-                # so this is a monotonic transform, not a cosine similarity.
-                "similarity_score": float(1.0 / (1.0 + float(distance))),
+                # Blended match + nutrient-quality score, bounded to [0, 1].
+                # Not a cosine similarity: Euclidean distance is unbounded, so
+                # the match term is a monotonic transform of it.
+                "similarity_score": float(min(max(score, 0.0), 1.0)),
             }
         )
     return results
