@@ -1,220 +1,181 @@
-import os
-import glob
-import re
-import pandas as pd
+"""Content-based food recommendation via k-nearest neighbours.
+
+Two corrections over the original implementation:
+
+1. **Euclidean, not cosine.** Cosine distance is scale-invariant, so it matched
+   macro *ratios* and ignored amounts entirely -- a 20 kcal food and a 2000 kcal
+   food with the same profile scored identically, making the user's calorie
+   target almost inert. Euclidean over min-max scaled features compares
+   magnitudes, which is what "foods close to this target" actually means.
+
+2. **Per-meal, not per-day, targets.** The target vector is the next *meal*,
+   so it sits on the same scale as a single food row. Matching a whole day's
+   2000 kcal against per-serving rows put the query far outside the data.
+
+Fiber is part of the feature vector and the query rather than being hardcoded
+to zero, so the LSTM's predicted fiber target is no longer discarded.
+"""
+import threading
+from dataclasses import dataclass
+from typing import Optional
+
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import MinMaxScaler
+from sqlalchemy.orm import Session
 
-# Path to the food datasets
-DATA_DIR = r"C:\Users\prabe\Desktop\nutrition_ai\food_dataset"
+FEATURE_COLUMNS = ["calories", "fat", "carbohydrates", "protein", "fiber"]
 
-# Cache for the loaded and preprocessed dataset
-_cached_df = None
-_cached_scaler = None
 
-# Non-vegetarian keywords (excludes from both vegetarian and vegan)
-NON_VEG_KEYWORDS = [
-    "chicken", "beef", "pork", "fish", "salmon", "shrimp", "bacon", "turkey", "lamb",
-    "crab", "lobster", "steak", "tuna", "mutton", "meat", "shashlik", "kabob", "kebab",
-    "pepperoni", "salami", "ham", "prawn", "anchovy", "sardine", "gelatin", "lard", "duck",
-    "pork", "veal", "octopus", "squid", "clam", "oyster", "scallop"
-]
+@dataclass
+class _Index:
+    """A fitted scaler + neighbour index over one dietary slice of the catalogue."""
 
-# Non-vegan keywords (excludes from vegan, but remains vegetarian if not in NON_VEG_KEYWORDS)
-NON_VEGAN_KEYWORDS = [
-    "milk", "cheese", "butter", "cream", "ghee", "yogurt", "paneer", "curd", "honey",
-    "mayo", "mayonnaise", "whey"
-]
+    frame: pd.DataFrame
+    scaler: MinMaxScaler
+    model: NearestNeighbors
+    fingerprint: tuple
 
-def check_egg_non_vegan(food_name: str) -> bool:
+
+_INDEX_CACHE: dict[str, _Index] = {}
+_CACHE_LOCK = threading.Lock()
+
+
+def _normalise_preference(preference: Optional[str]) -> str:
+    value = (preference or "None").strip().lower()
+    return value if value in {"vegetarian", "vegan"} else "none"
+
+
+def _catalogue_fingerprint(db: Session) -> tuple:
+    """Cheap signature that changes whenever the food catalogue changes."""
+    from sqlalchemy import func
+
+    from backend.database import FoodItem
+
+    row = db.query(func.count(FoodItem.id), func.max(FoodItem.id)).one()
+    return (int(row[0] or 0), int(row[1] or 0))
+
+
+def _load_frame(db: Session, preference: str) -> pd.DataFrame:
+    from backend.database import FoodItem
+
+    query = db.query(FoodItem)
+    if preference == "vegetarian":
+        query = query.filter(FoodItem.is_vegetarian.is_(True))
+    elif preference == "vegan":
+        query = query.filter(FoodItem.is_vegan.is_(True))
+
+    records = [
+        {
+            "id": item.id,
+            "name": item.name,
+            "serving_size": item.serving_size,
+            "region": item.region,
+            "calories": item.calories,
+            "fat": item.fat,
+            "carbohydrates": item.carbohydrates,
+            "protein": item.protein,
+            "fiber": item.fiber,
+            "sugars": item.sugars,
+            "is_vegetarian": item.is_vegetarian,
+            "is_vegan": item.is_vegan,
+        }
+        for item in query.all()
+    ]
+    return pd.DataFrame(records)
+
+
+def _get_index(db: Session, preference: str) -> Optional[_Index]:
+    """Return a cached index for this dietary slice, rebuilding if stale.
+
+    The scaler and neighbour model were previously refit on every request,
+    which meant a full table scan plus a fresh fit per API call.
     """
-    Checks if 'egg' is present in the food name while ignoring 'eggplant' or 'egg plant'.
-    """
-    name_lower = food_name.lower()
-    # Remove 'eggplant' and 'egg plant' to avoid false positives
-    cleaned = name_lower.replace("eggplant", "").replace("egg plant", "")
-    return "egg" in cleaned
+    fingerprint = _catalogue_fingerprint(db)
 
-def preprocess_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Preprocesses the dataset: handles missing values, cleans columns, and tags dietary flags.
-    """
-    # Create a copy
-    df = df.copy()
+    with _CACHE_LOCK:
+        cached = _INDEX_CACHE.get(preference)
+        if cached is not None and cached.fingerprint == fingerprint:
+            return cached
 
-    # Normalize column names
-    df.columns = [col.strip() for col in df.columns]
+    frame = _load_frame(db, preference)
+    if frame.empty:
+        return None
 
-    # Convert food name to string and clean it
-    df['food'] = df['food'].astype(str).str.strip()
+    scaler = MinMaxScaler()
+    scaled = scaler.fit_transform(frame[FEATURE_COLUMNS])
 
-    # Numeric columns to clean and handle
-    numeric_cols = ['Caloric Value', 'Fat', 'Carbohydrates', 'Protein', 'Dietary Fiber', 'Sugars']
-    for col in numeric_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-        else:
-            df[col] = 0.0
+    model = NearestNeighbors(metric="euclidean", algorithm="auto")
+    model.fit(scaled)
 
-    # Apply Vegetarian & Vegan Classification
-    is_veg_list = []
-    is_vegan_list = []
+    index = _Index(frame=frame, scaler=scaler, model=model, fingerprint=fingerprint)
+    with _CACHE_LOCK:
+        _INDEX_CACHE[preference] = index
+    return index
 
-    for name in df['food']:
-        name_lower = name.lower()
-        
-        # Check non-vegetarian (including eggs while ignoring eggplant and plant meat phrases)
-        has_egg = check_egg_non_vegan(name)
-        name_for_non_veg = name_lower.replace("coconut meat", "").replace("nut meat", "")
-        is_non_veg = any(kw in name_for_non_veg for kw in NON_VEG_KEYWORDS) or has_egg
-        
-        if is_non_veg:
-            is_veg = False
-            is_vegan = False
-        else:
-            is_veg = True
-            # Check non-vegan
-            contains_non_vegan_kw = any(kw in name_lower for kw in NON_VEGAN_KEYWORDS)
-            
-            if contains_non_vegan_kw:
-                is_vegan = False
-            else:
-                is_vegan = True
-                
-        is_veg_list.append(is_veg)
-        is_vegan_list.append(is_vegan)
 
-    df['is_vegetarian'] = is_veg_list
-    df['is_vegan'] = is_vegan_list
+def invalidate_cache() -> None:
+    """Drop every cached index. Call after reseeding the catalogue."""
+    with _CACHE_LOCK:
+        _INDEX_CACHE.clear()
 
-    return df
-
-def get_or_load_dataset() -> pd.DataFrame:
-    """
-    Loads and concatenates the 5 group CSV files from food_dataset folder and caches the result.
-    """
-    global _cached_df
-    if _cached_df is not None:
-        return _cached_df
-
-    csv_files = glob.glob(os.path.join(DATA_DIR, "FOOD-DATA-GROUP*.csv"))
-    if not csv_files:
-        raise FileNotFoundError(f"No food dataset CSV files found in {DATA_DIR}")
-
-    df_list = []
-    for filepath in csv_files:
-        df_group = pd.read_csv(filepath)
-        df_list.append(df_group)
-
-    combined_df = pd.concat(df_list, ignore_index=True)
-    # Remove any completely empty or duplicate rows based on food name
-    combined_df = combined_df.drop_duplicates(subset=['food']).reset_index(drop=True)
-    
-    _cached_df = preprocess_dataset(combined_df)
-    return _cached_df
 
 def recommend_food(
+    db: Session,
+    *,
     target_calories: float,
     target_protein: float,
     target_carbs: float,
     target_fat: float,
+    target_fiber: float = 0.0,
     dietary_preference: str = "None",
-    k: int = 10
+    k: int = 12,
 ) -> list[dict]:
-    """
-    Calculates nearest neighbors based on target macros and return recommendations from database.
-    dietary_preference can be: 'Vegetarian', 'Vegan', or 'None'.
-    """
-    from backend.database import SessionLocal, FoodItem, get_serving_size_heuristic
-    
-    db = SessionLocal()
-    try:
-        # Query database food items
-        query = db.query(FoodItem)
-        pref = dietary_preference.strip().lower()
-        if pref == "vegetarian":
-            query = query.filter(FoodItem.is_vegetarian == True)
-        elif pref == "vegan":
-            query = query.filter(FoodItem.is_vegan == True)
-            
-        foods = query.all()
-    finally:
-        db.close()
+    """Return the ``k`` catalogue items closest to a single-meal nutrient target.
 
-    if not foods:
-        # Fallback to local CSV dataset if database is empty/unseeded
-        df = get_or_load_dataset()
-        if df.empty:
-            return []
-            
-        pref = dietary_preference.strip().lower()
-        if pref == "vegetarian":
-            filtered_df = df[df['is_vegetarian'] == True].reset_index(drop=True)
-        elif pref == "vegan":
-            filtered_df = df[df['is_vegan'] == True].reset_index(drop=True)
-        else:
-            filtered_df = df.reset_index(drop=True)
-            
-        # Add serving_size column via heuristic
-        filtered_df['serving_size'] = filtered_df['food'].apply(get_serving_size_heuristic)
-    else:
-        # Convert DB food items to pandas DataFrame
-        data_list = [
-            {
-                "Unnamed: 0": item.id,
-                "food": item.name,
-                "serving_size": item.serving_size,
-                "Caloric Value": item.calories,
-                "Fat": item.fat,
-                "Carbohydrates": item.carbohydrates,
-                "Protein": item.protein,
-                "Dietary Fiber": item.fiber,
-                "Sugars": item.sugars,
-                "is_vegetarian": item.is_vegetarian,
-                "is_vegan": item.is_vegan
-            }
-            for item in foods
-        ]
-        filtered_df = pd.DataFrame(data_list)
-
-    if filtered_df.empty:
+    The session is passed in so the request's transaction is reused rather than
+    opening a second connection per call.
+    """
+    preference = _normalise_preference(dietary_preference)
+    index = _get_index(db, preference)
+    if index is None:
         return []
 
-    # Columns to use as features for matching
-    features = ['Caloric Value', 'Fat', 'Carbohydrates', 'Protein', 'Dietary Fiber']
-    
-    # Scale features
-    scaler = MinMaxScaler()
-    scaled_features = scaler.fit_transform(filtered_df[features])
+    neighbours = min(max(k, 1), len(index.frame))
 
-    # Fit KNN model on scaled features
-    nn = NearestNeighbors(n_neighbors=min(k, len(filtered_df)), metric='cosine')
-    nn.fit(scaled_features)
+    query_vector = pd.DataFrame(
+        [[target_calories, target_fat, target_carbs, target_protein, target_fiber]],
+        columns=FEATURE_COLUMNS,
+    )
+    scaled_target = index.scaler.transform(query_vector)
+    # A target richer than anything in the catalogue lands outside [0, 1];
+    # clipping keeps the query inside the data's support so the neighbour
+    # search stays meaningful instead of collapsing onto a single extreme row.
+    scaled_target = np.clip(scaled_target, 0.0, 1.0)
 
-    # Scale the target user input
-    target_vector = np.array([[target_calories, target_fat, target_carbs, target_protein, 0.0]]) # 0.0 for target fiber
-    scaled_target = scaler.transform(target_vector)
+    distances, indices = index.model.kneighbors(scaled_target, n_neighbors=neighbours)
 
-    # Find closest matches
-    distances, indices = nn.kneighbors(scaled_target)
-
-    recommendations = []
-    for idx, dist in zip(indices[0], distances[0]):
-        row = filtered_df.iloc[idx]
-        recommendations.append({
-            "id": int(row.get('Unnamed: 0', idx)),
-            "name": row['food'].title(),
-            "serving_size": str(row.get('serving_size', '1 serving')),
-            "calories": float(row['Caloric Value']),
-            "fat": float(row['Fat']),
-            "carbohydrates": float(row['Carbohydrates']),
-            "protein": float(row['Protein']),
-            "fiber": float(row['Dietary Fiber']),
-            "sugars": float(row['Sugars']),
-            "is_vegetarian": bool(row['is_vegetarian']),
-            "is_vegan": bool(row['is_vegan']),
-            "similarity_score": float(1.0 - dist) # Convert distance to cosine similarity
-        })
-
-    return recommendations
+    results = []
+    for position, distance in zip(indices[0], distances[0]):
+        row = index.frame.iloc[position]
+        results.append(
+            {
+                "id": int(row["id"]),
+                "name": str(row["name"]).title(),
+                "serving_size": str(row["serving_size"]),
+                "region": str(row["region"]),
+                "calories": float(row["calories"]),
+                "fat": float(row["fat"]),
+                "carbohydrates": float(row["carbohydrates"]),
+                "protein": float(row["protein"]),
+                "fiber": float(row["fiber"]),
+                "sugars": float(row["sugars"]),
+                "is_vegetarian": bool(row["is_vegetarian"]),
+                "is_vegan": bool(row["is_vegan"]),
+                # Bounded 0-1 closeness score. Euclidean distance is unbounded,
+                # so this is a monotonic transform, not a cosine similarity.
+                "similarity_score": float(1.0 / (1.0 + float(distance))),
+            }
+        )
+    return results
