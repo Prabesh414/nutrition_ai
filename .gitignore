@@ -18,10 +18,19 @@ htmlcov/
 
 # Environment Variables -- never commit real credentials
 .env
-.env.local
+.env.*
+!.env.example
 backend/.env
 backend/.env.*
 !backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Database dumps. These contain real user emails and password hashes.
+backups/
+*.dump
+*.sql.gz
 
 # Local databases
 *.db

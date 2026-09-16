@@ -248,3 +248,66 @@ def test_recommendations_reflect_dietary_preference(client, register_user):
     client.put(f"{API}/profile", headers=headers, json={**base, "dietary_preference": "None"})
     everything = client.get(f"{API}/recommendations", headers=headers).json()["recommendations"]
     assert everything
+
+
+# -- next-meal target vs the remaining budget --------------------------------
+
+DAILY = {"calories": 2695.0, "protein": 168.0, "carbs": 337.0, "fat": 75.0, "fiber": 25.0}
+SOME_HISTORY = [{"calories": 300, "protein": 10, "carbs": 40, "fat": 12, "fiber": 2}] * 3
+
+
+def _remaining(eaten_calories: float) -> dict:
+    share = eaten_calories / DAILY["calories"]
+    return {key: max(0.0, value - value * share) for key, value in DAILY.items()}
+
+
+def test_target_never_exceeds_what_is_left():
+    """Found against real data: 1433 kcal left, target came back as 1498."""
+    for eaten in (0, 800, 1262, 2000, 2400, 2690):
+        remaining = _remaining(eaten)
+        predicted = predict_next_nutrient_target(SOME_HISTORY, DAILY, remaining_targets=remaining)
+        assert predicted["calories"] <= max(remaining["calories"], DAILY["calories"] * 0.08) + 1e-6, (
+            f"eaten={eaten}, left={remaining['calories']:.0f}, got={predicted['calories']:.0f}"
+        )
+
+
+def test_target_shrinks_as_the_budget_is_spent():
+    early = predict_next_nutrient_target(SOME_HISTORY, DAILY, remaining_targets=_remaining(0))
+    late = predict_next_nutrient_target(SOME_HISTORY, DAILY, remaining_targets=_remaining(2400))
+    assert late["calories"] < early["calories"]
+
+
+def test_over_budget_still_offers_a_small_portion():
+    """A zero target would match only empty foods, which is not useful advice."""
+    spent = {key: 0.0 for key in DAILY}
+    predicted = predict_next_nutrient_target(SOME_HISTORY, DAILY, remaining_targets=spent)
+    assert 0 < predicted["calories"] <= DAILY["calories"] * 0.10
+
+
+def test_a_single_meal_is_never_most_of_the_day():
+    predicted = predict_next_nutrient_target([], DAILY)
+    assert predicted["calories"] <= DAILY["calories"] * 0.45 + 1e-6
+
+
+def test_remaining_budget_is_optional():
+    """Omitting it must keep the original daily-fraction behaviour."""
+    predicted = predict_next_nutrient_target(SOME_HISTORY, DAILY)
+    assert DAILY["calories"] * 0.15 <= predicted["calories"] <= DAILY["calories"] * 0.45
+
+
+def test_endpoint_target_respects_the_remaining_budget(client, register_user):
+    headers, _ = register_user("budget@example.com")
+    client.put(f"{API}/profile", headers=headers, json={
+        "age": 30, "gender": "Male", "height": 175, "weight": 70,
+        "activity_level": "Sedentary", "fitness_goal": "Lose Weight",
+        "dietary_preference": "None"})
+
+    targets = client.get(f"{API}/profile", headers=headers).json()
+    # Eat almost the whole allowance.
+    client.post(f"{API}/meals", headers=headers, json={
+        "name": "Very large meal", "calories": targets["target_calories"] - 150,
+        "protein": 50, "carbs": 100, "fat": 40, "fiber": 5})
+
+    body = client.get(f"{API}/recommendations", headers=headers).json()
+    assert body["next_meal_targets"]["calories"] <= max(
+        150, targets["target_calories"] * 0.08) + 1

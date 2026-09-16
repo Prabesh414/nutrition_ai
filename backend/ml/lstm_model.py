@@ -43,7 +43,12 @@ RANDOM_SEED = 42
 
 # A next meal should be a sensible slice of the day's remaining allowance.
 MIN_TARGET_FRACTION = 0.15
-MAX_TARGET_FRACTION = 0.60
+# A single meal should not be most of the day. 0.45 is a large dinner; the
+# previous 0.60 let one suggestion consume the bulk of the allowance.
+MAX_TARGET_FRACTION = 0.45
+# What to offer once the day's allowance is already spent: a small portion,
+# rather than a zero target that would match only empty foods.
+OVER_BUDGET_FRACTION = 0.08
 
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "lstm_weights.pth")
 
@@ -244,12 +249,20 @@ def get_trained_lstm_model() -> MealSequenceLSTM:
         return _trained_model
 
 
-def predict_next_nutrient_target(logged_meals: list[dict], baseline_targets: dict) -> dict:
+def predict_next_nutrient_target(
+    logged_meals: list[dict],
+    baseline_targets: dict,
+    remaining_targets: dict | None = None,
+) -> dict:
     """Predict the next meal's nutrient target.
 
-    ``logged_meals`` should be the meals already eaten *today*, oldest first.
-    The result is clamped to ``[15%, 60%]`` of each baseline daily target so a
-    single suggestion can neither be negligible nor blow the day's allowance.
+    ``logged_meals`` are the meals already eaten *today*, oldest first.
+    ``baseline_targets`` is the full daily allowance. ``remaining_targets``, when
+    supplied, is what is left of it after those meals.
+
+    The result is clamped to ``[15%, 45%]`` of each daily target, and then to
+    the remaining allowance, so a single suggestion is neither negligible nor
+    larger than the budget still available.
     """
     model = get_trained_lstm_model()
 
@@ -278,7 +291,22 @@ def predict_next_nutrient_target(logged_meals: list[dict], baseline_targets: dic
 
     for key in NUTRIENT_KEYS:
         baseline = float(baseline_targets.get(key, SCALING_FACTORS[key] * 0.5))
-        lower, upper = baseline * MIN_TARGET_FRACTION, baseline * MAX_TARGET_FRACTION
+        upper = baseline * MAX_TARGET_FRACTION
+        lower = baseline * MIN_TARGET_FRACTION
+
+        if remaining_targets is not None:
+            # Never suggest more than is actually left for the day. Without
+            # this the target is clamped only against the *daily* total, so a
+            # user who has eaten most of their allowance is still offered a
+            # full-sized meal.
+            left = max(0.0, float(remaining_targets.get(key, 0.0)))
+            upper = min(upper, left)
+            # Once the day's budget is spent, offer a token portion rather than
+            # collapsing to zero, which would match only empty foods.
+            floor = baseline * OVER_BUDGET_FRACTION
+            upper = max(upper, floor)
+            lower = min(lower, upper)
+
         nutrients[key] = max(lower, min(upper, nutrients[key]))
 
     return nutrients

@@ -70,7 +70,9 @@ def get_recommendations(
         for m in todays_meals
     ]
 
-    next_meal = predict_next_nutrient_target(history, daily_targets)
+    remaining = {key: max(0.0, daily_targets[key] - consumed[key]) for key in daily_targets}
+
+    next_meal = predict_next_nutrient_target(history, daily_targets, remaining_targets=remaining)
 
     recommendations = recommend_food(
         db,
