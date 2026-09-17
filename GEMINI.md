@@ -1,83 +1,154 @@
-# Project Instructions - Nutrition AI
+# Engineering Guide — Nutrition AI
 
-Welcome to the **AI-Based Personalized Diet Recommendation and Nutrition Management System** repository. This file serves as the definitive reference for the team-shared engineering standards, architecture, and development workflows. All agents and developers must strictly adhere to these guidelines.
-
----
-
-## Technical Stack
-
-### Backend (Python / FastAPI)
-- **Framework:** FastAPI
-- **Database ORM:** SQLAlchemy 2.0+ (using asynchronous-ready `SessionLocal` patterns)
-- **Database Driver:** `psycopg2-binary` (PostgreSQL)
-- **ML & Recommendation Engine:** `scikit-learn`, `pandas`, `numpy` (using Mifflin-St Jeor formula and Cosine Similarity / KNN)
-- **LLM Integration:** Ollama Local LLM Integration (e.g. Llama 3)
-- **Security:** `python-jose` for JWT tokens, `passlib[bcrypt]` for secure hashing.
-
-### Frontend (React / TypeScript)
-- **Framework:** React 19 + TypeScript 6.0
-- **Build Tool:** Vite 8
-- **Linter:** `oxlint` (extremely fast linter configured via `.oxlintrc.json`)
-- **Styling:** Vanilla CSS & Tailwind CSS
-- **Features:** Live clock, user token & usage tracker, profile popover access in navigation.
+Conventions for anyone (human or agent) working in this repository. Written to
+describe what the code **actually does**; an earlier version of this file
+described a stack that was never built.
 
 ---
 
-## Codebase Architecture & Structure
+## Stack
 
-```text
-C:\Users\prabe\Desktop\nutrition_ai\
-├───backend\                   # FastAPI application
-│   ├───database.py            # SQLAlchemy setup, models, and session management
-│   └───main.py                # App entry point, API routers, and business logic
-├───frontend\                  # React + TypeScript Vite frontend
-│   ├───src\
-│   │   ├───App.tsx            # Main application component
-│   │   ├───main.tsx           # Entry point
-│   │   ├───App.css / index.css
-│   │   └───assets\            # Static assets (images, icons)
-├───tests\                     # Pytest suite
-│   ├───test_auth_endpoints.py
-│   └───test_profile_image_persistence.py
-└───docs\                      # Detailed design & flow specifications
+### Backend — Python 3.11+
+
+| Concern | Choice | Note |
+|---|---|---|
+| Framework | FastAPI | Lifespan handler, not the deprecated `on_event` |
+| ORM | SQLAlchemy 2.0 | Typed `Mapped[...]` declarative models |
+| Migrations | Alembic | Reads `DATABASE_URL` from `backend.config` |
+| Database | PostgreSQL, SQLite locally | SQLite is the zero-setup default |
+| Passwords | `bcrypt` **directly** | See the warning below |
+| Tokens | `python-jose` | HS256 |
+| ML | scikit-learn, PyTorch, pandas | KNN retrieval; LSTM sequence model |
+| LLM | Ollama, optional | Must degrade to rules if unreachable |
+
+> **Do not use `passlib`.** passlib 1.7.4 reads `bcrypt.__about__`, which was
+> removed in bcrypt 4.1, and raises outright against bcrypt 5.x. Use the
+> `bcrypt` package directly, as `backend/security.py` does. Passwords are
+> SHA-256 pre-hashed and base64-encoded before hashing so inputs over bcrypt's
+> 72-byte limit are not silently truncated.
+
+### Frontend — React 19 + TypeScript
+
+Vite 8, `oxlint`, vanilla CSS, Vitest + Testing Library. **No UI framework, no
+router and no state library are installed.** Do not write documentation or code
+that assumes React Router, Axios, Tailwind or Chart.js are available; add the
+dependency first if one is genuinely needed.
+
+---
+
+## Layout
+
+```
+backend/
+├── main.py            app assembly only — no business logic here
+├── config.py          ALL configuration, from the environment
+├── security.py        hashing, JWT, the get_current_user dependency
+├── schemas.py         Pydantic models; every inbound field is bounded
+├── database.py        engine, session factory, ORM models
+├── nutrition.py       BMI / BMR / TDEE / macro targets
+├── food_data.py       dataset loading, dietary classifier, seeding
+├── recommendation.py  KNN retrieval and re-ranking
+├── ml/                sequence model
+└── routers/           one module per resource
+
+frontend/src/
+├── api/               client + response types; the ONLY place fetch is called
+├── hooks/             stateful behaviour
+├── components/        rendering
+└── lib/               pure helpers
 ```
 
+Dependencies point one way: `routers → domain modules → database`. A router
+must not contain a formula; a domain module must not know about HTTP.
+
 ---
 
-## Development Workflows
+## Non-negotiables
 
-### 1. Research -> Strategy -> Execution Lifecycle
-- **Research:** Map the codebase before writing code. Identify existing conventions, schemas, and design patterns.
-- **Strategy:** Outline your design/architecture. Ensure it aligns with existing layers.
-- **Execution:** Follow the **Plan -> Act -> Validate** cycle for every single change.
+These encode real defects that were found in this codebase. Breaking one
+reintroduces a specific bug.
 
-### 2. Implementation Guidelines
-- **Zero Warnings/Hack-free Code:** Never use typescript casts (`as any`), suppress compiler/linter warnings, or use reflection/prototype hacks. Write type-safe, explicit code.
-- **Composition over Inheritance:** Prioritize composition, wrapper classes, or standard React hooks/components over complex class inheritance.
-- **Strict Linting:** Always run `oxlint` in the frontend and fix any formatting/syntax errors before committing.
-- **No Direct Commit/Stage:** Never automatically stage or commit files unless explicitly directed.
+1. **No secret in source, ever.** Configuration comes from the environment via
+   `backend/config.py`. A live database password was previously hardcoded as an
+   `os.getenv` fallback and is now in the git history permanently. CI fails the
+   build if a connection string with an embedded password reappears.
 
-### 3. Testing Standards
-- **Pytest Suite:** All backend tests are located in `tests/` and are written using Pytest-style standalone functions (`def test_*`).
-- **Test Command:**
-  To run tests, ensure `pytest` is installed in your python environment, then run:
-  ```bash
-  pytest
-  ```
-- **Mandatory Test Updates:** Every feature addition or bug fix MUST be accompanied by a corresponding unit test in `tests/` to verify its correctness.
+2. **Every user-scoped endpoint resolves identity from the JWT.** Never accept
+   an email or user id as a parameter to select whose data to act on. Every
+   mutation checks ownership, and another user's row returns `404`, not `403`,
+   so ids cannot be probed.
 
-### 4. Running the App Locally
-- **Backend Setup:**
-  Run the backend using the provided batch or PowerShell scripts which automatically load the cloud Database URL:
-  ```powershell
-  # Windows PowerShell
-  ./run_backend.ps1
-  
-  # Command Prompt
-  run_backend.bat
-  ```
-- **Frontend Setup:**
-  Navigate to the `frontend/` directory and run:
-  ```bash
-  npm run dev
-  ```
+3. **Derived values are computed server-side.** BMI, BMR and macro targets are
+   response-only. The client previously computed them and the server stored
+   whatever arrived.
+
+4. **Meal queries are scoped to a calendar day.** Always filter on `log_date`.
+   The dashboard once summed the user's entire history and labelled it
+   "today".
+
+5. **No `any`, and no `as` cast to silence the compiler.** Narrowing casts on
+   `event.target.value` against a known union are fine.
+
+6. **Optional external services must degrade.** If Ollama is down the coach
+   returns rule-based replies. It must never surface a 500.
+
+7. **Every behavioural change ships with a test.** See below.
+
+---
+
+## Testing
+
+```bash
+pytest                      # backend, 136 tests
+cd frontend && npm test     # frontend, 18 tests
+```
+
+`tests/conftest.py` points `DATABASE_URL` at a temporary SQLite file **before**
+`backend.config` is imported, and truncates user tables between tests. The
+suite previously ran against the live Supabase database, creating and deleting
+real users and reseeding the live food table.
+
+**Never point the test suite at a real database.**
+
+Write tests that would fail if the bug came back. Prefer asserting a real
+metric (`val_loss < 0.01`) over asserting an object identity, and avoid
+tautologies — filtering on `is_vegetarian == True` and then asserting
+`is_vegetarian` is true tests nothing.
+
+---
+
+## Working practice
+
+**Research → Strategy → Execution.** Read the surrounding code before writing.
+Match the conventions already there.
+
+**Verify against reality.** Run the thing. Several defects here were only
+visible in real output: the recommender returning chocolate wafers to someone
+on a weight-loss goal, and buffalo dishes appearing in a vegan list.
+
+**State limitations in the code.** Where something is a heuristic, say so in
+the docstring. `backend/ml/lstm_model.py` records that its synthetic targets
+are linear, and `food_data.py` records that a food name cannot reveal hidden
+ingredients. Do not remove these.
+
+**Keep docs true.** If an endpoint, table or dependency changes, update
+`docs/` in the same commit.
+
+**Do not stage or commit unless asked.**
+
+---
+
+## Common commands
+
+```bash
+python -m uvicorn backend.main:app --reload   # backend
+alembic upgrade head                          # migrations
+alembic revision --autogenerate -m "..."      # new migration
+
+cd frontend
+npm run dev          # dev server
+npm run typecheck    # tsc -b
+npm run lint         # oxlint, must be clean
+npm test             # vitest
+npm run build        # tsc + vite build
+```

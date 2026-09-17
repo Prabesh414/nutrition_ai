@@ -1502,3 +1502,147 @@
   background-color: var(--rust);
   border-color: var(--rust);
 }
+
+/* ===========================================================================
+   Refactor support styles
+   Classes replacing the inline `style={{...}}` attributes that were scattered
+   through the old single-file component, plus resets for elements that became
+   real <button>s for keyboard and screen-reader access.
+   =========================================================================== */
+
+/* .nav-link used to be a <span>; it is a <button> now so it can be focused
+   and activated with the keyboard. Strip the default button chrome. */
+.nav-link {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--earth);
+}
+
+.nav-auth-btn {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+}
+
+/* Inline text button, used for the "Sign Up" / "Log In" modal switch. */
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--rust);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover { color: var(--bark); }
+
+.form-error {
+  margin: 0.6rem 0 0;
+  color: #b3261e;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.session-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.log-meal-submit {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.edit-profile-btn {
+  width: 100%;
+  margin-top: 1.2rem;
+  padding: 0.5rem;
+}
+
+.serving-size-cell {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--charcoal);
+  opacity: 0.85;
+}
+
+.dropdown-item-meta {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* The dropdown items became buttons; keep them looking like rows. */
+.dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+}
+
+.rec-portion {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-style: italic;
+  margin-top: 0.1rem;
+}
+
+.upload-hint {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.profile-edit-inline-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.profile-edit-inline-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.profile-edit-inline-actions button { flex: 1; padding: 0.45rem; }
+
+.coach-tab-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.coach-tab-container .chatbot-card { height: 600px; }
+
+.chat-typing { opacity: 0.65; font-style: italic; }
+
+.footer-centered { justify-content: center; flex-direction: column; gap: 0.35rem; }
+
+.footer-disclaimer {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-align: center;
+}

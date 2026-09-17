@@ -1,13 +1,28 @@
-fastapi>=0.100.0
-uvicorn>=0.22.0
-pydantic>=2.0
-sqlalchemy>=2.0
-psycopg2-binary>=2.9.0
-passlib[bcrypt]>=1.7.4
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic[email]>=2.7.0
+python-multipart>=0.0.9
+
+# Database
+sqlalchemy>=2.0.30
+alembic>=1.13.0
+psycopg2-binary>=2.9.9   # PostgreSQL driver (production)
+
+# Security
+# bcrypt is used directly: passlib 1.7.4 reads the removed `bcrypt.__about__`
+# and fails outright against bcrypt >= 5.
+bcrypt>=4.1.0
 python-jose[cryptography]>=3.3.0
-pandas>=2.0.0
-numpy>=1.24.0
-scikit-learn>=1.2.0
+
+# ML / data
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+torch>=2.2.0
+
+# Chatbot (optional at runtime: the coach falls back to rules if unreachable)
 ollama>=0.2.0
-python-multipart>=0.0.6
+
+# Config
 python-dotenv>=1.0.0

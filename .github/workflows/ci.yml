@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main, production-readiness]
+  pull_request:
+    branches: [main]
+
+# The suite builds its own temporary SQLite database; no real credential is
+# needed and nothing ever touches a deployed environment.
+env:
+  ENVIRONMENT: test
+  JWT_SECRET: ci-only-secret-not-used-anywhere-else
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest --cov=backend --cov-report=term-missing
+
+      - name: Verify migrations apply and roll back
+        env:
+          DATABASE_URL: sqlite:///./ci-migrations.db
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+
+  frontend:
+    name: Frontend (tsc, oxlint, vitest, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  secrets:
+    name: No credentials in source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan tracked files for connection strings and keys
+        run: |
+          # A database URL carrying an inline password used to be committed in
+          # backend/database.py and both run_backend scripts. *.env.example
+          # files are excluded: they exist to document the format and contain
+          # only placeholders.
+          if git grep -nIE '(postgres(ql)?|mysql)://[^:[:space:]]+:[^@[:space:]]+@' -- \
+              ':!*.md' ':!.github/*' ':!*.env.example' ':!.env.example' ; then
+            echo "::error::A connection string with an embedded password is committed."
+            exit 1
+          fi
+          # Generic secret shapes. Deliberately no literal from the leaked
+          # credential: an earlier version of this job hardcoded part of the
+          # password, which put it back into the tree it was meant to police.
+          # The value must be a quoted literal, so that an assignment from a
+          # function call such as `JWT_SECRET = _resolve_jwt_secret()` is not
+          # flagged.
+          if git grep -nIE '(JWT_SECRET|SECRET_KEY|API_KEY|PASSWORD)[[:space:]]*=[[:space:]]*["'"'"'][A-Za-z0-9_@#$%^&*-]{12,}["'"'"']' -- \
+              ':!*.md' ':!.github/*' ':!*.env.example' ':!.env.example' ':!tests/*'; then
+            echo "::error::A hardcoded secret is committed."
+            exit 1
+          fi
+          echo "No credentials found in tracked source."

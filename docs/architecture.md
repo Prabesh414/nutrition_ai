@@ -1,64 +1,121 @@
 # System Architecture
 
-This document describes the high-level architecture of the **AI-Based Personalized Diet Recommendation and Nutrition Management System**.
-
-## Architectural Overview
-
-The system follows a modern decoupled client-server architecture:
-
 ```text
-                     +-----------------------------------+
-                     |           React Frontend          |
-                     |       (User Interface & UX)       |
-                     +-----------------+-----------------+
-                                       |
-                                       | HTTPS / JSON
-                                       v
-                     +-----------------+-----------------+
-                     |          FastAPI Backend          |
-                     |        (Application Logic)        |
-                     +---+-------------+-------------+---+
-                         |             |             |
-        SQLAlchemy (ORM) |             |             | REST API / SDK
-                         v             |             v
-              +----------+---------+   |   +---------+---------+
-              | PostgreSQL Database|   |   |   Ollama Local    |
-              |   (User & Log Data)|   |   |   LLM Service     |
-              +--------------------+   v   +-------------------+
-                             +---------+---------+
-                             |     Scikit-Learn  |
-                             |  Recommendation   |
-                             |      Engine       |
-                             +-------------------+
+                       ┌──────────────────────────────┐
+                       │      React 19 + TypeScript   │
+                       │  components/ hooks/ api/ lib/│
+                       └───────────────┬──────────────┘
+                                       │ JSON over HTTP
+                                       │ Authorization: Bearer <JWT>
+                       ┌───────────────▼──────────────┐
+                       │        FastAPI backend       │
+                       │  routers → domain → data     │
+                       └───┬───────────┬───────────┬──┘
+                           │           │           │
+              SQLAlchemy   │           │           │  HTTP (optional)
+                           ▼           ▼           ▼
+                 ┌──────────────┐ ┌─────────┐ ┌──────────┐
+                 │  PostgreSQL  │ │ ML      │ │  Ollama  │
+                 │  (SQLite for │ │ scikit- │ │  local   │
+                 │   local dev) │ │ learn + │ │  LLM     │
+                 └──────────────┘ │ PyTorch │ └──────────┘
+                                  └─────────┘
 ```
+
+Ollama is optional. If it is not reachable the coach falls back to
+deterministic rule-based replies, so the feature works on a machine with no
+LLM installed.
 
 ---
 
-## Component Details
+## Backend layout
 
-### 1. Frontend (React)
-- **Role:** Interactive UI/UX.
-- **Key Libraries:** 
-  - React Router (Navigation)
-  - Axios (API requests)
-  - Chart.js / Recharts (Progress visualization & Dashboard)
-  - Tailwind CSS / Vanilla CSS (Styling)
+```
+backend/
+├── main.py            app assembly, CORS, lifespan; no business logic
+├── config.py          all configuration, read from the environment
+├── security.py        bcrypt hashing, JWT issue/verify, auth dependency
+├── schemas.py         Pydantic request/response models and validation
+├── database.py        engine, session factory, ORM models
+├── nutrition.py       BMI / BMR / TDEE / macro targets
+├── food_data.py       dataset loading, dietary classifier, seeding
+├── recommendation.py  KNN retrieval and re-ranking
+├── ml/lstm_model.py   sequence model
+└── routers/           auth, profile, meals, foods, recommendations, chat
+```
 
-### 2. Backend (FastAPI)
-- **Role:** Core business logic, secure authentication, API routing, and orchestration.
-- **Key Features:**
-  - High performance via asynchronous event loop.
-  - Automatic OpenAPI (Swagger) documentation generation.
-  - JWT-based authentication for secure session management.
+The dependency direction is one-way: `routers → domain modules → database`.
+Routers contain no formulae and domain modules contain no HTTP concerns, which
+is what lets `nutrition.py` and `recommendation.py` be unit-tested without a
+running server.
 
-### 3. Database (PostgreSQL)
-- **Role:** Relational storage for structured transactional and analytical data.
-- **Key Tables:** Users, Health Profiles, Food Items, Daily Logs, Chat History.
+### Request lifecycle
 
-### 4. Recommendation Engine (Python / Scikit-Learn)
-- **Role:** Processes user profile metrics (BMR, goals, preferences) and applies content-based filtering or clustering to generate personalized diet plans.
-- **Core Algorithms:** Cosine Similarity, K-Means Clustering for food categorization.
+```
+HTTP request
+   └─ CORS middleware            origin allow-list from CORS_ORIGINS
+      └─ Pydantic validation     rejects out-of-range input with 422
+         └─ get_current_user     decodes the JWT, loads the User, else 401
+            └─ get_db            request-scoped session, always closed
+               └─ router handler
+                  └─ domain module
+                     └─ commit, serialise via a response model
+```
 
-### 5. Chatbot Service (Ollama Local LLM Integration)
-- **Role:** Provides interactive nutritional advice.
-- **Approach:** Integrates a locally hosted LLM (e.g. Llama 3 or Phi-3 via Ollama) with system prompting tailored for healthy living advice.
+Every user-scoped handler takes `current_user` from the token. No handler
+accepts an email or user id as a parameter, which is what previously allowed
+one user to read and modify another user's data.
+
+---
+
+## Frontend layout
+
+```
+frontend/src/
+├── App.tsx            composition only
+├── api/
+│   ├── client.ts      typed fetch wrapper; token, errors, 401 handling
+│   └── types.ts       response shapes
+├── hooks/
+│   ├── useSession     token + user, restored by validating /auth/me
+│   ├── useDailyLog    today's meals, totals, recommendations
+│   ├── useCoach       one conversation shared by both chat surfaces
+│   └── useDraggable   pointer-event drag for the floating widget
+├── components/        Navbar, Landing, Dashboard, ProfilePage, Coach,
+│                      AuthModals, ProfileForm
+└── lib/               static content, image processing, profile helpers
+```
+
+Network access is confined to `api/client.ts`; components never call `fetch`.
+
+### State
+
+There is no state-management library. Server data lives in the hook that owns
+it and flows down as props; only the bearer token is persisted, in
+`localStorage`. The user object is deliberately **not** cached — it is
+re-fetched from `/auth/me` on load, so a stale profile cannot outlive a session.
+
+---
+
+## Security
+
+| Concern | Approach |
+|---|---|
+| Passwords | bcrypt cost 12, SHA-256 pre-hashed to survive the 72-byte limit |
+| Sessions | HS256 JWT; `JWT_SECRET` required in production |
+| Authorisation | Every mutation checks ownership; another user's row returns 404 |
+| Input | Pydantic bounds on every field; `LIKE` wildcards escaped |
+| Secrets | Environment only; CI fails the build if a credential is committed |
+| CORS | Explicit origin allow-list, not `*` |
+| Transport | TLS is expected to terminate at the reverse proxy |
+
+---
+
+## Deployment notes
+
+This is a final-year academic project and is not currently deployed. Running it
+publicly would additionally need: a rotated database credential, a strong
+`JWT_SECRET` with `ENVIRONMENT=production`, TLS, rate limiting on
+`/auth/login` and `/chat`, profile images moved to object storage, and
+`alembic upgrade head` in the release step rather than table creation at
+startup.
