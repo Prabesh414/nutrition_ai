@@ -47,7 +47,7 @@ change anything. No credential is committed to this repository.
 | `JWT_SECRET` | random per process | **Required** when `ENVIRONMENT=production` |
 | `ENVIRONMENT` | `development` | `production` enables strict configuration checks |
 | `CORS_ORIGINS` | `localhost:5173` | Comma-separated allow-list |
-| `OLLAMA_HOST` | `localhost:11434` | Optional; the coach degrades gracefully |
+| `OLLAMA_HOST` | `localhost:11434` | Optional; the coach degrades gracefully. Being replaced by Gemini — see [docs/llm_provider.md](docs/llm_provider.md) |
 
 Generate a secret with:
 
@@ -182,6 +182,7 @@ Exploratory analysis is in [`Prabesh_eda.ipynb`](Prabesh_eda.ipynb).
 | [Database schema](docs/database_schema.md) | Tables, relationships, migrations |
 | [API reference](docs/api_endpoints.md) | Every endpoint, with payloads |
 | [ML engine](docs/ml_model.md) | Formulae, the LSTM, and the recommender |
+| [LLM provider](docs/llm_provider.md) | **Planned** move to Gemini with key/model failover |
 | [Changelog](CHANGELOG.md) | History of changes |
 
 Engineering conventions for contributors are in [GEMINI.md](GEMINI.md).

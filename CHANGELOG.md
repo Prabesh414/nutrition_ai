@@ -4,6 +4,19 @@ This document tracks changes, documentation additions, and configuration updates
 
 ---
 
+## [Unreleased]
+
+### Planned
+- **[LLM provider](docs/llm_provider.md)**: replace the local Ollama
+  dependency in the nutrition coach with Gemini, called through an ordered
+  chain of `(model, API key)` candidates. A quota or transient failure on one
+  credential advances to the next rather than failing the request; the
+  rule-based tier remains the final fallback so `/chat` never returns a 500.
+  Design documented, **not yet implemented** -- `backend/chat.py` still calls
+  Ollama.
+
+---
+
 ## [Production Readiness] - 2026-09-16
 
 A security, correctness and maintainability pass across the whole project.

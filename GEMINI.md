@@ -19,7 +19,7 @@ described a stack that was never built.
 | Passwords | `bcrypt` **directly** | See the warning below |
 | Tokens | `python-jose` | HS256 |
 | ML | scikit-learn, PyTorch, pandas | KNN retrieval; LSTM sequence model |
-| LLM | Ollama, optional | Must degrade to rules if unreachable |
+| LLM | Ollama, optional | Must degrade to rules if unreachable. **Planned:** replace with Gemini + failover, see [docs/llm_provider.md](docs/llm_provider.md) |
 
 > **Do not use `passlib`.** passlib 1.7.4 reads `bcrypt.__about__`, which was
 > removed in bcrypt 4.1, and raises outright against bcrypt 5.x. Use the
@@ -89,8 +89,10 @@ reintroduces a specific bug.
 5. **No `any`, and no `as` cast to silence the compiler.** Narrowing casts on
    `event.target.value` against a known union are fine.
 
-6. **Optional external services must degrade.** If Ollama is down the coach
-   returns rule-based replies. It must never surface a 500.
+6. **Optional external services must degrade.** If the language model is
+   unreachable, rate limited or not configured, the coach returns rule-based
+   replies. It must never surface a 500. This holds for the planned Gemini
+   chain exactly as it does for Ollama today.
 
 7. **Every behavioural change ships with a test.** See below.
 

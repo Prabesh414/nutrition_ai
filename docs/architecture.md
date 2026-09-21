@@ -26,6 +26,12 @@ Ollama is optional. If it is not reachable the coach falls back to
 deterministic rule-based replies, so the feature works on a machine with no
 LLM installed.
 
+> **Planned change.** Ollama is to be replaced by Gemini, called through an
+> ordered chain of `(model, API key)` candidates so a quota or transient error
+> on one credential does not fail the request. The rule-based tier stays as the
+> final fallback and the `/chat` contract is unchanged. Design:
+> [llm_provider.md](llm_provider.md). Not yet implemented.
+
 ---
 
 ## Backend layout
