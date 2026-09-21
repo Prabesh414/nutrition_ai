@@ -35,9 +35,9 @@ def _classify(status: int, body: str) -> LLMError:
         # Ours to fix. The chain must not advance on this.
         return LLMError(FailureKind.BAD_REQUEST, f"malformed request: {body[:200]}")
     if status == 404:
-        # An unknown model id behaves like a dead candidate, not a bug we can
-        # fix at runtime, so let the chain move on to the next model.
-        return LLMError(FailureKind.TRANSIENT, f"model not found: {body[:200]}")
+        # The model id is wrong, retired, or not enabled for this account.
+        # Trying it with another key cannot help.
+        return LLMError(FailureKind.MODEL_UNAVAILABLE, f"model not found: {body[:200]}")
     return LLMError(FailureKind.TRANSIENT, f"unexpected status {status}: {body[:200]}")
 
 

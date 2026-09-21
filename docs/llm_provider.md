@@ -78,10 +78,38 @@ burns the chain.
 | Timeout | — | Advance immediately |
 | Invalid or revoked key | 401, 403 | Disable the credential for the process, advance |
 | Malformed request | 400 | **Stop.** Ours to fix; retrying on another key repeats it |
+| Model unusable | 404 | **Retire the model** for the process, skip its remaining keys |
 | Safety block | 200, empty | Advance once, then fall through to rules |
 
 A 400 must not advance the chain. It means the request is wrong, and trying
 every credential in turn only multiplies a bug into N failed calls.
+
+### Retiring a model
+
+A 404 means the model id is unknown, retired, or not enabled on the account.
+No credential can fix that, so the model is retired for the process rather
+than retried once per key on every request.
+
+This is what makes a deep chain cheap. Listing a model speculatively — a
+newer one that may not be available to you yet — costs a single wasted call
+in the lifetime of the process, after which the chain behaves as though it
+were never listed.
+
+### Time budget
+
+The chain is bounded by wall clock, not just by candidate count. With 4 keys
+and 3 models there are 12 candidates; at the per-attempt timeout that is
+minutes of waiting before the user sees anything, which is unusable in a chat
+box.
+
+`GEMINI_TOTAL_BUDGET_SECONDS` (default 12) caps the whole walk. Before each
+attempt the chain checks what is left, stops if it is below a useful
+threshold, and clamps the per-attempt timeout to the remaining budget so the
+last call cannot overrun it. When the budget is spent the coach answers from
+rules immediately.
+
+Both state mechanisms feed this: a cooled-down key and a retired model are
+skipped without a call, so the common case stays well inside the budget.
 
 ### Cooldown
 
@@ -111,9 +139,11 @@ GEMINI_API_KEY4=
 
 # Preference order, strongest first. Verify these IDs against the current
 # Google AI model list before relying on them -- names and availability change.
-GEMINI_MODELS=gemini-2.5-flash,gemini-2.0-flash
+GEMINI_MODELS=gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash
 
-GEMINI_TIMEOUT_SECONDS=20
+# Per attempt, and for the whole failover walk.
+GEMINI_TIMEOUT_SECONDS=8
+GEMINI_TOTAL_BUDGET_SECONDS=12
 ```
 
 With no keys set, the coach uses rule-based replies and the app still runs.
@@ -179,6 +209,10 @@ Cases to cover:
 - Every candidate fails; the reply is rule-based and the status is 200.
 - A 400 stops the chain instead of walking it.
 - A cooled-down credential is skipped without a call being attempted.
+- A 404 retires the model and skips its remaining keys.
+- A retired model is skipped entirely on later requests.
+- The walk stops when the time budget is spent, and the per-attempt timeout
+  is clamped so the final call cannot overrun it.
 - No keys configured: rules, no network call, no error.
 - The dietary-preference behaviour already covered for the rule tier still
   holds — a vegan is not told to eat eggs.

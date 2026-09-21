@@ -278,7 +278,7 @@ def gemini_with_response(status: int, json_body=None, text_body="", headers=None
         (400, FailureKind.BAD_REQUEST),
         (500, FailureKind.TRANSIENT),
         (503, FailureKind.TRANSIENT),
-        (404, FailureKind.TRANSIENT),
+        (404, FailureKind.MODEL_UNAVAILABLE),
     ],
 )
 def test_http_status_classification(status, expected):
@@ -322,3 +322,167 @@ def test_retry_after_is_read_from_the_header():
 def test_reply_rejects_blank_text():
     with pytest.raises(ValueError):
         LLMReply(text="  ", model="m")
+
+
+# -- model-level failover ---------------------------------------------------
+
+def test_unknown_model_is_retired_after_one_attempt():
+    """A 404 means the model id is wrong; no key can fix it.
+
+    Without retirement the chain burns one call per key on that model on
+    every single request, forever.
+    """
+    chain, generate = make_chain([
+        LLMError(FailureKind.MODEL_UNAVAILABLE, "404 not found"),
+        LLMReply(text="fast model answered", model="fast-model"),
+    ])
+
+    result = chain.generate(**ASK)
+
+    assert result.reply.text == "fast model answered"
+    # One attempt on the dead model, then straight to the next model -- not
+    # four attempts working through every key first.
+    assert generate.calls == [("strong-model", "key-one"), ("fast-model", "key-one")]
+    assert chain.model_status()[0]["retired"]
+
+
+def test_a_retired_model_is_skipped_on_later_requests():
+    chain, generate = make_chain([
+        LLMError(FailureKind.MODEL_UNAVAILABLE, "404"),
+        LLMReply(text="ok", model="fast-model"),
+        LLMReply(text="ok again", model="fast-model"),
+    ])
+
+    chain.generate(**ASK)
+    generate.calls.clear()
+
+    chain.generate(**ASK)
+
+    assert all(model != "strong-model" for model, _ in generate.calls)
+
+
+def test_a_dead_model_does_not_disable_the_key():
+    """Retire the model, not the credential -- the key is fine."""
+    chain, _ = make_chain([
+        LLMError(FailureKind.MODEL_UNAVAILABLE, "404"),
+        LLMReply(text="ok", model="fast-model"),
+    ])
+    chain.generate(**ASK)
+
+    assert not chain.status()[0]["disabled"]
+    assert chain.status()[0]["available"]
+
+
+def test_every_model_retired_means_unconfigured():
+    chain, _ = make_chain([LLMError(FailureKind.MODEL_UNAVAILABLE, "404")] * 8)
+
+    chain.generate(**ASK)
+
+    assert not chain.configured, "nothing left to try"
+    assert all(m["retired"] for m in chain.model_status())
+
+
+def test_deeper_model_chain_falls_through_in_order():
+    """The point of the chain: 2.5 fails, 2.0 answers."""
+    chain, generate = make_chain(
+        [LLMError(FailureKind.MODEL_UNAVAILABLE, "404"),      # newest not available
+         LLMError(FailureKind.RATE_LIMITED, "429"),           # next model, key1 throttled
+         LLMReply(text="third tier answered", model="c")],
+        keys=["key-one", "key-two"],
+        models=["speculative-new", "middle", "oldest"],
+    )
+
+    result = chain.generate(**ASK)
+
+    assert result.reply.text == "third tier answered"
+    assert generate.calls == [
+        ("speculative-new", "key-one"),   # retired immediately, no second key
+        ("middle", "key-one"),
+        ("middle", "key-two"),
+    ]
+
+
+# -- latency: the walk must be bounded by the clock -------------------------
+
+def slow_generate(clock, seconds_per_call, outcomes=None):
+    """A stub that advances the fake clock, simulating slow calls."""
+    calls = []
+    sequence = iter(outcomes or [])
+
+    def _generate(*, api_key, model, system_prompt, user_prompt, timeout):
+        calls.append((model, api_key, timeout))
+        clock.advance(seconds_per_call)
+        try:
+            outcome = next(sequence)
+        except StopIteration:
+            outcome = LLMError(FailureKind.TRANSIENT, "slow and failing")
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    _generate.calls = calls
+    return _generate
+
+
+def test_budget_stops_the_walk_before_every_candidate_is_tried():
+    """4 keys x 2 models at 8s each would be a minute of waiting."""
+    clock = FakeClock()
+    generate = slow_generate(clock, seconds_per_call=5.0)
+    chain = LLMChain(KEYS, MODELS, generate=generate, clock=clock,
+                     timeout=8.0, total_budget=12.0)
+
+    start = clock.now
+    result = chain.generate(**ASK)
+    elapsed = clock.now - start
+
+    assert not result.succeeded
+    assert result.exhausted_budget
+    assert elapsed <= 12.0 + 5.0, "must not run far past the budget"
+    assert result.attempts < 8, f"walked {result.attempts} of 8 candidates"
+
+
+def test_per_attempt_timeout_is_clamped_to_the_remaining_budget():
+    """The last attempt must not be allowed to overrun the budget."""
+    clock = FakeClock()
+    generate = slow_generate(clock, seconds_per_call=5.0)
+    chain = LLMChain(KEYS, MODELS, generate=generate, clock=clock,
+                     timeout=8.0, total_budget=12.0)
+
+    chain.generate(**ASK)
+
+    timeouts = [timeout for _, _, timeout in generate.calls]
+    assert timeouts[0] == 8.0, "first attempt gets the full per-attempt timeout"
+    assert timeouts[-1] < 8.0, "later attempts are clamped by what budget remains"
+    assert all(t > 0 for t in timeouts)
+
+
+def test_a_fast_success_is_unaffected_by_the_budget():
+    clock = FakeClock()
+    generate = slow_generate(clock, 0.2, [LLMReply(text="quick", model="strong-model")])
+    chain = LLMChain(KEYS, MODELS, generate=generate, clock=clock, total_budget=12.0)
+
+    result = chain.generate(**ASK)
+
+    assert result.reply.text == "quick"
+    assert not result.exhausted_budget
+    assert result.attempts == 1
+
+
+def test_retired_models_and_cooled_keys_cost_no_time():
+    """The two state mechanisms are what keep the common case fast."""
+    clock = FakeClock()
+    generate = slow_generate(clock, 1.0, [
+        LLMError(FailureKind.MODEL_UNAVAILABLE, "404"),
+        LLMReply(text="ok", model="fast-model"),
+        LLMReply(text="ok again", model="fast-model"),
+    ])
+    chain = LLMChain(KEYS, MODELS, generate=generate, clock=clock, total_budget=12.0)
+
+    chain.generate(**ASK)
+    generate.calls.clear()
+    before = clock.now
+
+    chain.generate(**ASK)
+
+    assert clock.now - before == pytest.approx(1.0), "one call, not five"
+    assert len(generate.calls) == 1

@@ -61,13 +61,28 @@ GEMINI_API_KEYS = _collect_gemini_keys()
 
 # Preference order, strongest first. Every key is tried on one model before
 # the chain drops to the next, so quality degrades only when it must.
+#
+# Listing a model that does not exist on your account is safe: the first 404
+# retires it for the process, so the cost is one wasted call rather than one
+# per key on every request. That makes it reasonable to put a newer model at
+# the front speculatively -- if it is not available yet, the chain simply
+# falls through to the next.
+#
+# Verify these ids against Google's current model list; names and free-tier
+# availability change over time.
+DEFAULT_GEMINI_MODELS = "gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash"
+
 GEMINI_MODELS = [
     model.strip()
-    for model in os.getenv("GEMINI_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    for model in os.getenv("GEMINI_MODELS", DEFAULT_GEMINI_MODELS).split(",")
     if model.strip()
 ]
 
-GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "20"))
+# Per-attempt timeout, and a ceiling on the whole failover walk. The budget
+# is what keeps a bad day from turning into a minutes-long wait: once it is
+# spent the coach answers from rules rather than trying every candidate.
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "8"))
+GEMINI_TOTAL_BUDGET_SECONDS = float(os.getenv("GEMINI_TOTAL_BUDGET_SECONDS", "12"))
 
 MAX_PROFILE_IMAGE_BYTES = int(os.getenv("MAX_PROFILE_IMAGE_BYTES", str(512 * 1024)))
 

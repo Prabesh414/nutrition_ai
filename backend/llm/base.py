@@ -27,6 +27,10 @@ class FailureKind(Enum):
     #: Model declined to answer (safety filter, empty candidates).
     NO_CONTENT = "no_content"
 
+    #: The model id itself is unusable on this account -- unknown, retired or
+    #: not enabled. No credential will fix it, so retire the model, not the key.
+    MODEL_UNAVAILABLE = "model_unavailable"
+
 
 #: A bad request is our fault; retrying it on another credential just repeats
 #: the same error N times and burns quota for nothing.

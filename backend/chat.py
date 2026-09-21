@@ -12,7 +12,12 @@ import logging
 from functools import lru_cache
 from typing import Optional
 
-from backend.config import GEMINI_API_KEYS, GEMINI_MODELS, GEMINI_TIMEOUT_SECONDS
+from backend.config import (
+    GEMINI_API_KEYS,
+    GEMINI_MODELS,
+    GEMINI_TIMEOUT_SECONDS,
+    GEMINI_TOTAL_BUDGET_SECONDS,
+)
 from backend.llm import LLMChain
 
 logger = logging.getLogger(__name__)
@@ -156,6 +161,7 @@ def _chain() -> LLMChain:
         api_keys=GEMINI_API_KEYS,
         models=GEMINI_MODELS,
         timeout=GEMINI_TIMEOUT_SECONDS,
+        total_budget=GEMINI_TOTAL_BUDGET_SECONDS,
     )
 
 

@@ -48,7 +48,8 @@ change anything. No credential is committed to this repository.
 | `ENVIRONMENT` | `development` | `production` enables strict configuration checks |
 | `CORS_ORIGINS` | `localhost:5173` | Comma-separated allow-list |
 | `GEMINI_API_KEY1`…`4` | unset | Optional; without any the coach uses rule-based replies |
-| `GEMINI_MODELS` | `gemini-2.5-flash,gemini-2.0-flash` | Preference order, strongest first |
+| `GEMINI_MODELS` | `gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash` | Preference order, strongest first |
+| `GEMINI_TOTAL_BUDGET_SECONDS` | `12` | Ceiling on the whole failover walk |
 
 Generate a secret with:
 
