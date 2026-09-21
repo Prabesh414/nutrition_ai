@@ -15,22 +15,19 @@
               SQLAlchemy   │           │           │  HTTP (optional)
                            ▼           ▼           ▼
                  ┌──────────────┐ ┌─────────┐ ┌──────────┐
-                 │  PostgreSQL  │ │ ML      │ │  Ollama  │
-                 │  (SQLite for │ │ scikit- │ │  local   │
-                 │   local dev) │ │ learn + │ │  LLM     │
+                 │  PostgreSQL  │ │ ML      │ │  Gemini  │
+                 │  (SQLite for │ │ scikit- │ │  REST    │
+                 │   local dev) │ │ learn + │ │  API     │
                  └──────────────┘ │ PyTorch │ └──────────┘
                                   └─────────┘
 ```
 
-Ollama is optional. If it is not reachable the coach falls back to
-deterministic rule-based replies, so the feature works on a machine with no
-LLM installed.
-
-> **Planned change.** Ollama is to be replaced by Gemini, called through an
-> ordered chain of `(model, API key)` candidates so a quota or transient error
-> on one credential does not fail the request. The rule-based tier stays as the
-> final fallback and the `/chat` contract is unchanged. Design:
-> [llm_provider.md](llm_provider.md). Not yet implemented.
+Gemini is optional. It is called through an ordered chain of
+`(model, API key)` candidates, so a quota or transient error on one credential
+advances to the next rather than failing the request. When every candidate is
+exhausted — or no key is configured at all — the coach falls back to
+deterministic rule-based replies, so the feature works with no credentials on
+a fresh clone. Design: [llm_provider.md](llm_provider.md).
 
 ---
 
@@ -46,6 +43,8 @@ backend/
 ├── nutrition.py       BMI / BMR / TDEE / macro targets
 ├── food_data.py       dataset loading, dietary classifier, seeding
 ├── recommendation.py  KNN retrieval and re-ranking
+├── chat.py            coach prompts, and the rule-based fallback tier
+├── llm/               Gemini provider and the failover chain
 ├── ml/lstm_model.py   sequence model
 └── routers/           auth, profile, meals, foods, recommendations, chat
 ```

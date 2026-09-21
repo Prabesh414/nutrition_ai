@@ -47,7 +47,8 @@ change anything. No credential is committed to this repository.
 | `JWT_SECRET` | random per process | **Required** when `ENVIRONMENT=production` |
 | `ENVIRONMENT` | `development` | `production` enables strict configuration checks |
 | `CORS_ORIGINS` | `localhost:5173` | Comma-separated allow-list |
-| `OLLAMA_HOST` | `localhost:11434` | Optional; the coach degrades gracefully. Being replaced by Gemini — see [docs/llm_provider.md](docs/llm_provider.md) |
+| `GEMINI_API_KEY1`…`4` | unset | Optional; without any the coach uses rule-based replies |
+| `GEMINI_MODELS` | `gemini-2.5-flash,gemini-2.0-flash` | Preference order, strongest first |
 
 Generate a secret with:
 
@@ -126,9 +127,11 @@ search then retrieves matching foods and re-ranks them by nutrient quality.
 showing consumed, target and remaining calories and macronutrients.
 
 **AI nutrition coach** — answers questions using the user's own profile and
-intake. Backed by a local Ollama model when one is available, and by
-deterministic rule-based replies when it is not, so the feature works without
-an LLM installed. Medical questions are deflected to a qualified professional.
+intake. Backed by Gemini, called through a failover chain of API keys and
+models so a quota limit on one credential does not take the feature down, and
+by deterministic rule-based replies when every candidate is exhausted or no
+key is configured. Medical questions are deflected to a qualified
+professional.
 
 ---
 
@@ -139,7 +142,7 @@ an LLM installed. Medical questions are deflected to a qualified professional.
                                                               │
                                       ┌───────────────────────┼───────────────┐
                                       ▼                       ▼               ▼
-                                 PostgreSQL            scikit-learn      Ollama
+                                 PostgreSQL            scikit-learn      Gemini
                                  (SQLite local)        + PyTorch        (optional)
 ```
 
@@ -182,7 +185,7 @@ Exploratory analysis is in [`Prabesh_eda.ipynb`](Prabesh_eda.ipynb).
 | [Database schema](docs/database_schema.md) | Tables, relationships, migrations |
 | [API reference](docs/api_endpoints.md) | Every endpoint, with payloads |
 | [ML engine](docs/ml_model.md) | Formulae, the LSTM, and the recommender |
-| [LLM provider](docs/llm_provider.md) | **Planned** move to Gemini with key/model failover |
+| [LLM provider](docs/llm_provider.md) | Gemini failover across keys and models |
 | [Changelog](CHANGELOG.md) | History of changes |
 
 Engineering conventions for contributors are in [GEMINI.md](GEMINI.md).

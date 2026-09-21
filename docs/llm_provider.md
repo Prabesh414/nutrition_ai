@@ -1,10 +1,9 @@
-# LLM Provider Plan — Gemini with Failover
+# LLM Provider — Gemini with Failover
 
-> **Status: planned, not implemented.** The coach currently calls a local
-> Ollama model and falls back to rule-based replies
-> (`backend/chat.py`). Nothing described here is in the code yet. This
-> document is the design to build against; update the status line when it
-> lands, and do not describe it as working before then.
+> **Status: implemented.** Lives in `backend/llm/` and is wired into
+> `backend/chat.py`. Ollama has been removed. Covered by
+> `tests/test_llm_chain.py` and `tests/test_chat.py`, neither of which makes a
+> network call.
 
 ---
 
@@ -100,12 +99,15 @@ with multiple workers, each holds its own view and the cost is a few extra
 
 ## Configuration
 
-Keys come from the environment as a comma-separated list, consistent with how
-`CORS_ORIGINS` is already handled in `backend/config.py`:
+Keys come from numbered environment variables, read in `backend/config.py`:
 
 ```bash
-# Comma-separated. One is fine; the chain adapts to however many are present.
-GEMINI_API_KEYS=key_one,key_two
+# Numbered, GEMINI_API_KEY1..8, plus a bare GEMINI_API_KEY for a single key.
+# Order is preserved; blanks and duplicates are dropped.
+GEMINI_API_KEY1=
+GEMINI_API_KEY2=
+GEMINI_API_KEY3=
+GEMINI_API_KEY4=
 
 # Preference order, strongest first. Verify these IDs against the current
 # Google AI model list before relying on them -- names and availability change.
@@ -154,9 +156,11 @@ holding the rule-based answers — and gains nothing about HTTP or retries.
 `chain.py` owns every decision about what to try next. Keeping the single call
 free of retry logic is what makes both halves testable.
 
-Dependency: `google-genai`. Add it to `requirements.txt` as optional in spirit
-— an `ImportError` must degrade to rules exactly as a missing `ollama` package
-does today.
+Dependency: `httpx`, already present. The REST endpoint is used rather than
+the `google-genai` SDK because the design classifies failures by HTTP status,
+and reading the status directly is more precise than mapping SDK exception
+types. The key travels in an `x-goog-api-key` header, not a query parameter,
+so it cannot end up in proxy logs.
 
 ---
 
@@ -181,20 +185,17 @@ Cases to cover:
 
 ---
 
-## Migration
+## Migration (done)
 
-Ollama support is removed rather than kept alongside. Two providers means two
-paths to maintain and test, and the rule-based tier already covers the
-"no model available" case that keeping Ollama would serve.
+Ollama was removed rather than kept alongside. Two providers means two paths
+to maintain and test, and the rule-based tier already covers the "no model
+available" case that keeping Ollama would have served.
 
-1. Add `backend/llm/` and its tests. Nothing is wired up yet.
-2. Switch `chat.py` to the chain; delete `_ollama_reply`.
-3. Remove `OLLAMA_*` from `backend/config.py` and the `.env.example` files;
-   drop `ollama` from `requirements.txt`.
-4. Update `README.md`, `docs/architecture.md`, `docs/workflow.md`,
-   `docs/api_endpoints.md` and the stack table in `GEMINI.md` in the **same
-   commit** as step 2, per the "keep docs true" rule.
-5. Change the status line at the top of this document.
+All of it landed in one commit, per the "keep docs true" rule: `backend/llm/`
+and its tests, `chat.py` switched over, `OLLAMA_*` dropped from
+`backend/config.py`, both `.env.example` files, `requirements.txt`, and the
+prose in `README.md`, `GEMINI.md`, `docs/architecture.md`,
+`docs/workflow.md` and `docs/api_endpoints.md`.
 
 The `/chat` request and response contract does not change. `source` stays
 `"llm"` or `"rules"`, so the frontend needs no changes at all.

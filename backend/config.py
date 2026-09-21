@@ -37,9 +37,37 @@ CORS_ORIGIN_REGEX = os.getenv(
     r"^https?://(?:localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[0-1])\.\d+\.\d+):5173$",
 )
 
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").strip()
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3").strip()
-OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "20"))
+# --- Nutrition coach (Gemini) ---------------------------------------------
+# Keys are read from numbered variables: GEMINI_API_KEY1 .. GEMINI_API_KEY8,
+# plus a bare GEMINI_API_KEY for the single-key case. Order is preserved,
+# blanks are skipped, and duplicates are dropped so a copy-paste slip does not
+# make the chain retry the same exhausted credential twice.
+MAX_GEMINI_KEYS = 8
+
+
+def _collect_gemini_keys() -> list[str]:
+    candidates = [os.getenv("GEMINI_API_KEY", "")]
+    candidates += [os.getenv(f"GEMINI_API_KEY{n}", "") for n in range(1, MAX_GEMINI_KEYS + 1)]
+
+    keys: list[str] = []
+    for candidate in candidates:
+        key = candidate.strip()
+        if key and key not in keys:
+            keys.append(key)
+    return keys
+
+
+GEMINI_API_KEYS = _collect_gemini_keys()
+
+# Preference order, strongest first. Every key is tried on one model before
+# the chain drops to the next, so quality degrades only when it must.
+GEMINI_MODELS = [
+    model.strip()
+    for model in os.getenv("GEMINI_MODELS", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+    if model.strip()
+]
+
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "20"))
 
 MAX_PROFILE_IMAGE_BYTES = int(os.getenv("MAX_PROFILE_IMAGE_BYTES", str(512 * 1024)))
 

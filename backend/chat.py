@@ -1,14 +1,19 @@
 """Nutrition coach replies.
 
-Prefers a locally hosted Ollama model and degrades to deterministic rule-based
-answers when Ollama is unreachable, so the feature works on a machine with no
-LLM installed. The rule engine previously lived duplicated in two places in the
-frontend; it is the fallback path here and nowhere else.
+Answers come from Gemini, called through a failover chain of
+`(model, API key)` candidates, and degrade to deterministic rule-based answers
+when every candidate is exhausted or no key is configured. The feature
+therefore works on a machine with no credentials at all.
+
+The rule engine previously lived duplicated in two places in the frontend; it
+is the final fallback tier here and nowhere else.
 """
 import logging
+from functools import lru_cache
 from typing import Optional
 
-from backend.config import OLLAMA_HOST, OLLAMA_MODEL, OLLAMA_TIMEOUT_SECONDS
+from backend.config import GEMINI_API_KEYS, GEMINI_MODELS, GEMINI_TIMEOUT_SECONDS
+from backend.llm import LLMChain
 
 logger = logging.getLogger(__name__)
 
@@ -144,30 +149,39 @@ def rule_based_reply(message: str, profile: Optional[dict], consumed: Optional[d
     )
 
 
-def _ollama_reply(message: str, context: str) -> Optional[str]:
-    """Query Ollama; return None on any failure so the caller can fall back."""
-    try:
-        import ollama
-    except ImportError:
+@lru_cache(maxsize=1)
+def _chain() -> LLMChain:
+    """The process-wide failover chain, built once from configuration."""
+    return LLMChain(
+        api_keys=GEMINI_API_KEYS,
+        models=GEMINI_MODELS,
+        timeout=GEMINI_TIMEOUT_SECONDS,
+    )
+
+
+def reset_chain() -> None:
+    """Drop the cached chain. Used by tests after changing configuration."""
+    _chain.cache_clear()
+
+
+def _llm_reply(message: str, context: str) -> Optional[str]:
+    """Ask Gemini; return None on any failure so the caller falls back."""
+    chain = _chain()
+    if not chain.configured:
         return None
 
     prompt = f"{context}\n\nQuestion: {message}" if context else message
+    result = chain.generate(system_prompt=SYSTEM_PROMPT, user_prompt=prompt)
 
-    try:
-        client = ollama.Client(host=OLLAMA_HOST, timeout=OLLAMA_TIMEOUT_SECONDS)
-        response = client.chat(
-            model=OLLAMA_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-        )
-    except Exception as exc:  # noqa: BLE001 - any transport/model error must degrade
-        logger.info("Ollama unavailable (%s); using rule-based coach.", type(exc).__name__)
-        return None
+    if result.succeeded and result.reply is not None:
+        return result.reply.text
 
-    reply = (response.get("message") or {}).get("content", "").strip()
-    return reply or None
+    logger.info(
+        "Coach falling back to rules after %s attempt(s): %s",
+        result.attempts,
+        ", ".join(f"{who}={kind.value}" for who, kind in result.failures) or "not configured",
+    )
+    return None
 
 
 def generate_reply(
@@ -179,7 +193,7 @@ def generate_reply(
 ) -> tuple[str, str]:
     """Return ``(reply, source)`` where source is ``"llm"`` or ``"rules"``."""
     context = build_user_context(display_name=display_name, profile=profile, consumed=consumed)
-    reply = _ollama_reply(message, context)
+    reply = _llm_reply(message, context)
     if reply:
         return reply, "llm"
     return rule_based_reply(message, profile, consumed), "rules"

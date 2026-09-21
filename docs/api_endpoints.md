@@ -233,8 +233,9 @@ bounded to `[0, 1]`; it is **not** a cosine similarity. See
 }
 ```
 
-`source` is `llm` when Ollama answered and `rules` when it was unreachable and
-the deterministic fallback replied. The request carries no history; the server
+`source` is `llm` when Gemini answered and `rules` when every candidate in
+the failover chain was exhausted — or no key is configured — and the
+deterministic fallback replied. The request carries no history; the server
 assembles context from the caller's own profile and today's intake. Messages
 are 1–2000 characters.
 

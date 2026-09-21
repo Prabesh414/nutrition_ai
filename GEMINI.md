@@ -19,7 +19,7 @@ described a stack that was never built.
 | Passwords | `bcrypt` **directly** | See the warning below |
 | Tokens | `python-jose` | HS256 |
 | ML | scikit-learn, PyTorch, pandas | KNN retrieval; LSTM sequence model |
-| LLM | Ollama, optional | Must degrade to rules if unreachable. **Planned:** replace with Gemini + failover, see [docs/llm_provider.md](docs/llm_provider.md) |
+| LLM | Gemini REST via `httpx`, optional | Failover chain over keys and models; see [docs/llm_provider.md](docs/llm_provider.md) |
 
 > **Do not use `passlib`.** passlib 1.7.4 reads `bcrypt.__about__`, which was
 > removed in bcrypt 4.1, and raises outright against bcrypt 5.x. Use the
@@ -91,8 +91,9 @@ reintroduces a specific bug.
 
 6. **Optional external services must degrade.** If the language model is
    unreachable, rate limited or not configured, the coach returns rule-based
-   replies. It must never surface a 500. This holds for the planned Gemini
-   chain exactly as it does for Ollama today.
+   replies. It must never surface a 500. A `400` from the provider stops the
+   failover chain rather than walking it -- that is our bug, and retrying it
+   on every credential just repeats it.
 
 7. **Every behavioural change ships with a test.** See below.
 
@@ -123,6 +124,10 @@ tautologies — filtering on `is_vegetarian == True` and then asserting
 
 **Research → Strategy → Execution.** Read the surrounding code before writing.
 Match the conventions already there.
+
+**No test may make a real API call.** The LLM chain takes its `generate`
+function by injection and the Gemini provider is driven through a stubbed
+`httpx` transport. A suite that needs a key cannot run in CI.
 
 **Verify against reality.** Run the thing. Several defects here were only
 visible in real output: the recommender returning chocolate wafers to someone

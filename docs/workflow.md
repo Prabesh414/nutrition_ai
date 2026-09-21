@@ -78,10 +78,15 @@ logging in again.
   POST /chat
       │
       ▼
-  Ollama reachable? ──yes──► LLM reply, prompted with the user's own numbers
-      │                      → {"source": "llm"}
-      no
+  for each (model, key) candidate, strongest model first:
       │
+      ├── answered ──────────► {"source": "llm"}
+      ├── 429 rate limited ──► cool that key down, try the next
+      ├── 5xx / timeout ─────► try the next
+      ├── 401 bad key ───────► disable it for this process, try the next
+      └── 400 bad request ───► stop; ours to fix, retrying repeats it
+      │
+      │  every candidate exhausted, or no key configured
       ▼
   Rule-based reply keyed on intent (protein, calories, fibre, hydration…)
       → {"source": "rules"}

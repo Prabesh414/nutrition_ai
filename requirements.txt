@@ -21,8 +21,11 @@ numpy>=1.26.0
 scikit-learn>=1.4.0
 torch>=2.2.0
 
-# Chatbot (optional at runtime: the coach falls back to rules if unreachable)
-ollama>=0.2.0
+# Nutrition coach. Gemini is called over its REST API with httpx rather than
+# the SDK: the failover design classifies on HTTP status, and reading the
+# status directly is more precise than mapping SDK exception types.
+# Entirely optional at runtime -- with no key the coach falls back to rules.
+httpx>=0.27.0
 
 # Config
 python-dotenv>=1.0.0

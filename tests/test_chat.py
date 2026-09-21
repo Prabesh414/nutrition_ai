@@ -1,4 +1,4 @@
-"""Nutrition coach replies and its Ollama fallback behaviour."""
+"""Nutrition coach replies and the Gemini failover fallback."""
 import pytest
 
 from backend.chat import generate_reply, rule_based_reply
@@ -44,26 +44,55 @@ def test_unknown_question_gets_a_useful_prompt():
     assert "ask me" in rule_based_reply("what is the capital of Nepal?", None, None).lower()
 
 
-def test_generate_reply_falls_back_to_rules_without_ollama(monkeypatch):
-    monkeypatch.setattr("backend.chat._ollama_reply", lambda message, context: None)
+def test_generate_reply_falls_back_to_rules_without_a_model(monkeypatch):
+    monkeypatch.setattr("backend.chat._llm_reply", lambda message, context: None)
     reply, source = generate_reply("protein?", profile=VEGAN_PROFILE, consumed=CONSUMED)
     assert source == "rules" and reply
 
 
 def test_generate_reply_prefers_the_llm_when_available(monkeypatch):
-    monkeypatch.setattr("backend.chat._ollama_reply", lambda message, context: "LLM answer")
+    monkeypatch.setattr("backend.chat._llm_reply", lambda message, context: "LLM answer")
     reply, source = generate_reply("protein?", profile=VEGAN_PROFILE, consumed=CONSUMED)
     assert (reply, source) == ("LLM answer", "llm")
 
 
-def test_ollama_failure_is_swallowed(monkeypatch):
-    """A broken Ollama must degrade, never 500."""
+def test_provider_failure_is_swallowed(monkeypatch):
+    """A broken provider must degrade, never 500."""
     def explode(*args, **kwargs):
         raise ConnectionError("refused")
 
-    monkeypatch.setattr("ollama.Client", explode)
+    monkeypatch.setattr("backend.llm.gemini.generate", explode)
     _, source = generate_reply("protein?", profile=VEGAN_PROFILE, consumed=CONSUMED)
     assert source == "rules"
+
+
+def test_no_keys_configured_means_no_network_call(monkeypatch):
+    """The clean-clone path: no credentials, no attempt, still an answer."""
+    import backend.chat as chat
+
+    called = []
+    monkeypatch.setattr("backend.llm.gemini.generate",
+                        lambda **kw: called.append(kw) or None)
+    reply, source = generate_reply("protein?", profile=VEGAN_PROFILE, consumed=CONSUMED)
+
+    assert source == "rules" and reply
+    assert called == [], "must not reach the network without a key"
+
+
+def test_chain_answer_is_used_when_a_key_works(monkeypatch):
+    """End to end through the real chain, with the HTTP call stubbed."""
+    import backend.chat as chat
+    from backend.llm import LLMChain
+    from backend.llm.base import LLMReply
+
+    stub = LLMChain(
+        ["fake-key"], ["fake-model"],
+        generate=lambda **kw: LLMReply(text="Gemini says eat lentils.", model="fake-model"),
+    )
+    monkeypatch.setattr(chat, "_chain", lambda: stub)
+
+    reply, source = generate_reply("protein?", profile=VEGAN_PROFILE, consumed=CONSUMED)
+    assert (reply, source) == ("Gemini says eat lentils.", "llm")
 
 
 def test_chat_endpoint_requires_authentication(client):
@@ -71,7 +100,7 @@ def test_chat_endpoint_requires_authentication(client):
 
 
 def test_chat_endpoint_answers_with_the_callers_context(client, register_user, monkeypatch):
-    monkeypatch.setattr("backend.chat._ollama_reply", lambda message, context: None)
+    monkeypatch.setattr("backend.chat._llm_reply", lambda message, context: None)
     headers, _ = register_user("chat@example.com")
     client.put(f"{API}/profile", headers=headers, json={
         "age": 28, "gender": "Female", "height": 165, "weight": 58,
