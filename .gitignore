@@ -47,3 +47,5 @@ Thumbs.db
 
 # NOTE: food_dataset/ is intentionally tracked. The application cannot run
 # without it, so excluding it made a fresh clone unusable.
+
+ml_experiments/__pycache__/

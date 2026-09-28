@@ -152,6 +152,7 @@ backend/     FastAPI app: routers/, config, security, schemas, nutrition,
              food_data, recommendation, ml/
 frontend/    React app: api/, hooks/, components/, lib/
 alembic/     Database migrations
+ml_experiments/  Neural-network coursework experiments (see docs/neural_network_report.md)
 tests/       Pytest suite
 docs/        Design documentation
 food_dataset/  Kaggle CSVs (tracked; the app cannot run without them)
@@ -187,6 +188,7 @@ Exploratory analysis is in [`Prabesh_eda.ipynb`](Prabesh_eda.ipynb).
 | [API reference](docs/api_endpoints.md) | Every endpoint, with payloads |
 | [ML engine](docs/ml_model.md) | Formulae, the LSTM, and the recommender |
 | [LLM provider](docs/llm_provider.md) | Gemini failover across keys and models |
+| [Neural network report](docs/neural_network_report.md) | Coursework: MLP dietary classifier, hyperparameter study, confusion matrix |
 | [Changelog](CHANGELOG.md) | History of changes |
 
 Engineering conventions for contributors are in [GEMINI.md](GEMINI.md).

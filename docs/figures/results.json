@@ -1,0 +1,414 @@
+{
+  "dataset": {
+    "total": 3292,
+    "features": 34,
+    "splits": {
+      "train": 2139,
+      "val": 494,
+      "test": 659
+    },
+    "class_counts": {
+      "Non-Vegetarian": 754,
+      "Vegetarian": 171,
+      "Vegan": 2367
+    }
+  },
+  "sweep": {
+    "Architecture": [
+      {
+        "label": "32",
+        "describe": "hidden=32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7368937996419561,
+        "accuracy": 0.8340080971659919,
+        "weighted_f1": 0.8451036246230591,
+        "best_epoch": 57
+      },
+      {
+        "label": "64x32",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "128x64x32",
+        "describe": "hidden=128x64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7431257668986689,
+        "accuracy": 0.8441295546558705,
+        "weighted_f1": 0.8541095762736948,
+        "best_epoch": 72
+      },
+      {
+        "label": "256x128x64",
+        "describe": "hidden=256x128x64, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7438047378115243,
+        "accuracy": 0.8481781376518218,
+        "weighted_f1": 0.8597973517603008,
+        "best_epoch": 38
+      }
+    ],
+    "Learning rate": [
+      {
+        "label": "0.0001",
+        "describe": "hidden=64x32, lr=0.0001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.6945926910863798,
+        "accuracy": 0.8076923076923077,
+        "weighted_f1": 0.8244042687461894,
+        "best_epoch": 91
+      },
+      {
+        "label": "0.001",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "0.01",
+        "describe": "hidden=64x32, lr=0.01, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.765664036817883,
+        "accuracy": 0.8582995951417004,
+        "weighted_f1": 0.8661920361897004,
+        "best_epoch": 34
+      },
+      {
+        "label": "0.1",
+        "describe": "hidden=64x32, lr=0.1, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.786392004177848,
+        "accuracy": 0.8704453441295547,
+        "weighted_f1": 0.8722735399443923,
+        "best_epoch": 94
+      }
+    ],
+    "Dropout": [
+      {
+        "label": "0.0",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.0, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.778354663079241,
+        "accuracy": 0.8785425101214575,
+        "weighted_f1": 0.881781966731455,
+        "best_epoch": 88
+      },
+      {
+        "label": "0.2",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "0.4",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.4, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7335968379446641,
+        "accuracy": 0.8319838056680162,
+        "weighted_f1": 0.8429608530295029,
+        "best_epoch": 72
+      },
+      {
+        "label": "0.6",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.6, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7013403507557002,
+        "accuracy": 0.8076923076923077,
+        "weighted_f1": 0.8254029283168595,
+        "best_epoch": 96
+      }
+    ],
+    "Optimiser": [
+      {
+        "label": "Adam",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "SGD",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=sgd, weighted=yes",
+        "macro_f1": 0.7193040228624978,
+        "accuracy": 0.8238866396761133,
+        "weighted_f1": 0.8401703527162447,
+        "best_epoch": 89
+      },
+      {
+        "label": "RMSprop",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=rmsprop, weighted=yes",
+        "macro_f1": 0.7487922705314011,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8563574488059614,
+        "best_epoch": 69
+      }
+    ],
+    "Batch size": [
+      {
+        "label": "16",
+        "describe": "hidden=64x32, lr=0.001, batch=16, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7835609691857818,
+        "accuracy": 0.8603238866396761,
+        "weighted_f1": 0.8653388573991391,
+        "best_epoch": 48
+      },
+      {
+        "label": "64",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "256",
+        "describe": "hidden=64x32, lr=0.001, batch=256, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7314393057641565,
+        "accuracy": 0.840080971659919,
+        "weighted_f1": 0.8537110061365979,
+        "best_epoch": 100
+      }
+    ],
+    "Activation": [
+      {
+        "label": "ReLU",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      },
+      {
+        "label": "Tanh",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=tanh, opt=adam, weighted=yes",
+        "macro_f1": 0.7639796659404503,
+        "accuracy": 0.8562753036437247,
+        "weighted_f1": 0.8633784057932664,
+        "best_epoch": 85
+      },
+      {
+        "label": "LeakyReLU",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=leaky_relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7519660920989194,
+        "accuracy": 0.8481781376518218,
+        "weighted_f1": 0.8588591890789419,
+        "best_epoch": 72
+      }
+    ],
+    "Class weighting": [
+      {
+        "label": "Off",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=no",
+        "macro_f1": 0.8404434508857411,
+        "accuracy": 0.917004048582996,
+        "weighted_f1": 0.9143998599163874,
+        "best_epoch": 62
+      },
+      {
+        "label": "On",
+        "describe": "hidden=64x32, lr=0.001, batch=64, dropout=0.2, act=relu, opt=adam, weighted=yes",
+        "macro_f1": 0.7436769263059126,
+        "accuracy": 0.8461538461538461,
+        "weighted_f1": 0.8568472096657351,
+        "best_epoch": 72
+      }
+    ]
+  },
+  "best_by_axis": {
+    "Architecture": "256x128x64",
+    "Learning rate": "0.1",
+    "Dropout": "0.0",
+    "Optimiser": "RMSprop",
+    "Batch size": "16",
+    "Activation": "Tanh",
+    "Class weighting": "Off"
+  },
+  "tuned_config": "hidden=256x128x64, lr=0.1, batch=16, dropout=0.0, act=tanh, opt=rmsprop, weighted=no",
+  "baseline": {
+    "accuracy": 0.8148710166919575,
+    "macro_f1": 0.6925147831436321,
+    "weighted_f1": 0.8260679970011137,
+    "per_class": {
+      "Non-Vegetarian": {
+        "precision": 0.7300613496932515,
+        "recall": 0.7880794701986755,
+        "f1": 0.7579617834394905,
+        "support": 151
+      },
+      "Vegetarian": {
+        "precision": 0.3384615384615385,
+        "recall": 0.6470588235294118,
+        "f1": 0.4444444444444444,
+        "support": 34
+      },
+      "Vegan": {
+        "precision": 0.9187935034802784,
+        "recall": 0.8354430379746836,
+        "f1": 0.8751381215469614,
+        "support": 474
+      }
+    },
+    "confusion": [
+      [
+        119,
+        6,
+        26
+      ],
+      [
+        3,
+        22,
+        9
+      ],
+      [
+        41,
+        37,
+        396
+      ]
+    ]
+  },
+  "tuned": {
+    "accuracy": 0.8330804248861912,
+    "macro_f1": 0.6801547816473189,
+    "weighted_f1": 0.8333633516067326,
+    "per_class": {
+      "Non-Vegetarian": {
+        "precision": 0.7195121951219512,
+        "recall": 0.7814569536423841,
+        "f1": 0.7492063492063492,
+        "support": 151
+      },
+      "Vegetarian": {
+        "precision": 0.41935483870967744,
+        "recall": 0.38235294117647056,
+        "f1": 0.4,
+        "support": 34
+      },
+      "Vegan": {
+        "precision": 0.9008620689655172,
+        "recall": 0.8818565400843882,
+        "f1": 0.8912579957356077,
+        "support": 474
+      }
+    },
+    "confusion": [
+      [
+        118,
+        6,
+        27
+      ],
+      [
+        2,
+        13,
+        19
+      ],
+      [
+        44,
+        12,
+        418
+      ]
+    ],
+    "best_epoch": 35,
+    "report": "                precision    recall  f1-score   support\n\nNon-Vegetarian      0.720     0.781     0.749       151\n    Vegetarian      0.419     0.382     0.400        34\n         Vegan      0.901     0.882     0.891       474\n\n      accuracy                          0.833       659\n     macro avg      0.680     0.682     0.680       659\n  weighted avg      0.834     0.833     0.833       659\n"
+  },
+  "runtime_seconds": 173.3,
+  "combined_search": {
+    "candidates": 24,
+    "folds": 3,
+    "best_config": "hidden=128x64x32, lr=0.001, batch=64, dropout=0.1, act=relu, opt=rmsprop, weighted=no",
+    "cv_macro_f1": 0.7862067892910409,
+    "cv_std": 0.006339383035929385,
+    "test": {
+      "accuracy": 0.8679817905918058,
+      "macro_f1": 0.7258960207738582,
+      "weighted_f1": 0.8637375627618682,
+      "per_class": {
+        "Non-Vegetarian": {
+          "precision": 0.7544910179640718,
+          "recall": 0.8344370860927153,
+          "f1": 0.7924528301886793,
+          "support": 151
+        },
+        "Vegetarian": {
+          "precision": 0.7058823529411765,
+          "recall": 0.35294117647058826,
+          "f1": 0.47058823529411764,
+          "support": 34
+        },
+        "Vegan": {
+          "precision": 0.9136842105263158,
+          "recall": 0.9156118143459916,
+          "f1": 0.9146469968387777,
+          "support": 474
+        }
+      },
+      "confusion": [
+        [
+          126,
+          0,
+          25
+        ],
+        [
+          6,
+          12,
+          16
+        ],
+        [
+          35,
+          5,
+          434
+        ]
+      ],
+      "report": "                precision    recall  f1-score   support\n\nNon-Vegetarian      0.754     0.834     0.792       151\n    Vegetarian      0.706     0.353     0.471        34\n         Vegan      0.914     0.916     0.915       474\n\n      accuracy                          0.868       659\n     macro avg      0.791     0.701     0.726       659\n  weighted avg      0.866     0.868     0.864       659\n"
+    },
+    "leaderboard": [
+      {
+        "label": "cfg12",
+        "cv_macro_f1": 0.7862067892910409,
+        "cv_std": 0.006339383035929385,
+        "config": "hidden=128x64x32, lr=0.001, batch=64, dropout=0.1, act=relu, opt=rmsprop, weighted=no"
+      },
+      {
+        "label": "cfg15",
+        "cv_macro_f1": 0.785567590353447,
+        "cv_std": 0.021255996236078444,
+        "config": "hidden=256x128x64, lr=0.01, batch=64, dropout=0.0, act=leaky_relu, opt=adam, weighted=no"
+      },
+      {
+        "label": "cfg10",
+        "cv_macro_f1": 0.7786706699304444,
+        "cv_std": 0.0075432928298570885,
+        "config": "hidden=256x128x64, lr=0.001, batch=64, dropout=0.0, act=relu, opt=adam, weighted=no"
+      },
+      {
+        "label": "cfg21",
+        "cv_macro_f1": 0.7760347893990821,
+        "cv_std": 0.01199781825889115,
+        "config": "hidden=256x128x64, lr=0.03, batch=128, dropout=0.1, act=leaky_relu, opt=adam, weighted=no"
+      },
+      {
+        "label": "cfg07",
+        "cv_macro_f1": 0.7641163479448146,
+        "cv_std": 0.01772822121430442,
+        "config": "hidden=64x32, lr=0.003, batch=16, dropout=0.1, act=relu, opt=rmsprop, weighted=no"
+      },
+      {
+        "label": "cfg22",
+        "cv_macro_f1": 0.7626734353356531,
+        "cv_std": 0.00423179959713366,
+        "config": "hidden=128x64, lr=0.01, batch=128, dropout=0.0, act=relu, opt=adam, weighted=yes"
+      },
+      {
+        "label": "cfg04",
+        "cv_macro_f1": 0.7605334127004003,
+        "cv_std": 0.009683378898385785,
+        "config": "hidden=64x32, lr=0.001, batch=64, dropout=0.0, act=relu, opt=rmsprop, weighted=yes"
+      },
+      {
+        "label": "cfg03",
+        "cv_macro_f1": 0.7589685433782756,
+        "cv_std": 0.003703261454097567,
+        "config": "hidden=256x128x64, lr=0.003, batch=16, dropout=0.1, act=leaky_relu, opt=rmsprop, weighted=no"
+      }
+    ],
+    "runtime_seconds": 469.6
+  }
+}
