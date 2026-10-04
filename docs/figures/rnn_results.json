@@ -1,0 +1,470 @@
+{
+  "dataset": {
+    "rows": 3292,
+    "vocab_size": 33,
+    "splits": {
+      "train": 2139,
+      "val": 494,
+      "test": 659
+    }
+  },
+  "architectures": {
+    "SimpleRNN": {
+      "cell": "rnn",
+      "bidirectional": false,
+      "parameters": 7523,
+      "accuracy": 0.8801213960546282,
+      "macro_f1": 0.7814206895724479,
+      "weighted_f1": 0.8844211113085119,
+      "per_class": {
+        "Non-Vegetarian": {
+          "precision": 0.8344370860927153,
+          "recall": 0.8344370860927153,
+          "f1": 0.8344370860927153,
+          "support": 151
+        },
+        "Vegetarian": {
+          "precision": 0.49019607843137253,
+          "recall": 0.7352941176470589,
+          "f1": 0.5882352941176471,
+          "support": 34
+        },
+        "Vegan": {
+          "precision": 0.9387308533916849,
+          "recall": 0.9050632911392406,
+          "f1": 0.9215896885069818,
+          "support": 474
+        }
+      },
+      "confusion": [
+        [
+          126,
+          6,
+          19
+        ],
+        [
+          0,
+          25,
+          9
+        ],
+        [
+          25,
+          20,
+          429
+        ]
+      ],
+      "best_epoch": 31,
+      "mean_gradient_norm": 1.683312710599162
+    },
+    "LSTM": {
+      "cell": "lstm",
+      "bidirectional": false,
+      "parameters": 26339,
+      "accuracy": 0.9347496206373292,
+      "macro_f1": 0.8918762088974855,
+      "weighted_f1": 0.9352539979311684,
+      "per_class": {
+        "Non-Vegetarian": {
+          "precision": 0.8726114649681529,
+          "recall": 0.9072847682119205,
+          "f1": 0.8896103896103896,
+          "support": 151
+        },
+        "Vegetarian": {
+          "precision": 0.8055555555555556,
+          "recall": 0.8529411764705882,
+          "f1": 0.8285714285714286,
+          "support": 34
+        },
+        "Vegan": {
+          "precision": 0.9656652360515021,
+          "recall": 0.9493670886075949,
+          "f1": 0.9574468085106383,
+          "support": 474
+        }
+      },
+      "confusion": [
+        [
+          137,
+          3,
+          11
+        ],
+        [
+          0,
+          29,
+          5
+        ],
+        [
+          20,
+          4,
+          450
+        ]
+      ],
+      "best_epoch": 31,
+      "mean_gradient_norm": 0.6099467659569067
+    },
+    "GRU": {
+      "cell": "gru",
+      "bidirectional": false,
+      "parameters": 20067,
+      "accuracy": 0.936267071320182,
+      "macro_f1": 0.8826890826245423,
+      "weighted_f1": 0.9366910442406644,
+      "per_class": {
+        "Non-Vegetarian": {
+          "precision": 0.9047619047619048,
+          "recall": 0.8807947019867549,
+          "f1": 0.8926174496644296,
+          "support": 151
+        },
+        "Vegetarian": {
+          "precision": 0.7435897435897436,
+          "recall": 0.8529411764705882,
+          "f1": 0.7945205479452054,
+          "support": 34
+        },
+        "Vegan": {
+          "precision": 0.9619450317124736,
+          "recall": 0.959915611814346,
+          "f1": 0.9609292502639916,
+          "support": 474
+        }
+      },
+      "confusion": [
+        [
+          133,
+          5,
+          13
+        ],
+        [
+          0,
+          29,
+          5
+        ],
+        [
+          14,
+          5,
+          455
+        ]
+      ],
+      "best_epoch": 32,
+      "mean_gradient_norm": 0.5231203020111923
+    },
+    "BiGRU": {
+      "cell": "gru",
+      "bidirectional": true,
+      "parameters": 39075,
+      "accuracy": 0.9332321699544764,
+      "macro_f1": 0.8727823111487405,
+      "weighted_f1": 0.9335118357764134,
+      "per_class": {
+        "Non-Vegetarian": {
+          "precision": 0.8789808917197452,
+          "recall": 0.9139072847682119,
+          "f1": 0.8961038961038961,
+          "support": 151
+        },
+        "Vegetarian": {
+          "precision": 0.7647058823529411,
+          "recall": 0.7647058823529411,
+          "f1": 0.7647058823529411,
+          "support": 34
+        },
+        "Vegan": {
+          "precision": 0.9636752136752137,
+          "recall": 0.9514767932489452,
+          "f1": 0.9575371549893843,
+          "support": 474
+        }
+      },
+      "confusion": [
+        [
+          138,
+          3,
+          10
+        ],
+        [
+          1,
+          26,
+          7
+        ],
+        [
+          18,
+          5,
+          451
+        ]
+      ],
+      "best_epoch": 21,
+      "mean_gradient_norm": 0.2711123050060385
+    }
+  },
+  "best": "LSTM",
+  "hyperparameters": {
+    "Hidden size": [
+      {
+        "label": "16",
+        "macro_f1": 0.9089360073298526,
+        "accuracy": 0.9392712550607287,
+        "parameters": 3507
+      },
+      {
+        "label": "32",
+        "macro_f1": 0.9092794507903542,
+        "accuracy": 0.9493927125506073,
+        "parameters": 7491
+      },
+      {
+        "label": "64",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "128",
+        "macro_f1": 0.9300366240262868,
+        "accuracy": 0.9493927125506073,
+        "parameters": 63651
+      }
+    ],
+    "Embedding dim": [
+      {
+        "label": "8",
+        "macro_f1": 0.8781657182409708,
+        "accuracy": 0.9291497975708503,
+        "parameters": 14667
+      },
+      {
+        "label": "16",
+        "macro_f1": 0.9252502722282424,
+        "accuracy": 0.9534412955465587,
+        "parameters": 16467
+      },
+      {
+        "label": "32",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "64",
+        "macro_f1": 0.9385247557265625,
+        "accuracy": 0.9574898785425101,
+        "parameters": 27267
+      }
+    ],
+    "Layers": [
+      {
+        "label": "1",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "2",
+        "macro_f1": 0.9314695340501792,
+        "accuracy": 0.951417004048583,
+        "parameters": 45027
+      },
+      {
+        "label": "3",
+        "macro_f1": 0.9379948791713498,
+        "accuracy": 0.9574898785425101,
+        "parameters": 69987
+      }
+    ],
+    "Direction": [
+      {
+        "label": "Uni",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "Bi",
+        "macro_f1": 0.9124112978524743,
+        "accuracy": 0.9574898785425101,
+        "parameters": 39075
+      }
+    ],
+    "Dropout": [
+      {
+        "label": "0.0",
+        "macro_f1": 0.9335351827914223,
+        "accuracy": 0.9534412955465587,
+        "parameters": 20067
+      },
+      {
+        "label": "0.2",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "0.4",
+        "macro_f1": 0.9247732329731561,
+        "accuracy": 0.9534412955465587,
+        "parameters": 20067
+      }
+    ],
+    "Learning rate": [
+      {
+        "label": "0.001",
+        "macro_f1": 0.8970794897542955,
+        "accuracy": 0.9352226720647774,
+        "parameters": 20067
+      },
+      {
+        "label": "0.003",
+        "macro_f1": 0.9277821840346626,
+        "accuracy": 0.9554655870445344,
+        "parameters": 20067
+      },
+      {
+        "label": "0.01",
+        "macro_f1": 0.9409294210411528,
+        "accuracy": 0.9615384615384616,
+        "parameters": 20067
+      }
+    ]
+  },
+  "memory": {
+    "0": {
+      "rnn": {
+        "macro_f1": 0.7814206895724479,
+        "accuracy": 0.8801213960546282,
+        "mean_gradient_norm": 1.683312710599162
+      },
+      "lstm": {
+        "macro_f1": 0.8918762088974855,
+        "accuracy": 0.9347496206373292,
+        "mean_gradient_norm": 0.6099467659569067
+      },
+      "gru": {
+        "macro_f1": 0.8826890826245423,
+        "accuracy": 0.936267071320182,
+        "mean_gradient_norm": 0.5231203020111923
+      }
+    },
+    "10": {
+      "rnn": {
+        "macro_f1": 0.7684435557289634,
+        "accuracy": 0.8330804248861912,
+        "mean_gradient_norm": 1.3745129983183513
+      },
+      "lstm": {
+        "macro_f1": 0.885151498907016,
+        "accuracy": 0.9377845220030349,
+        "mean_gradient_norm": 0.6635312926637198
+      },
+      "gru": {
+        "macro_f1": 0.8984835346804068,
+        "accuracy": 0.9393019726858877,
+        "mean_gradient_norm": 0.48462932407998255
+      }
+    },
+    "20": {
+      "rnn": {
+        "macro_f1": 0.7178062361098275,
+        "accuracy": 0.8118361153262519,
+        "mean_gradient_norm": 1.3346909754856418
+      },
+      "lstm": {
+        "macro_f1": 0.9133698994431979,
+        "accuracy": 0.9514415781487102,
+        "mean_gradient_norm": 0.6255783517328591
+      },
+      "gru": {
+        "macro_f1": 0.9200760620176887,
+        "accuracy": 0.9544764795144158,
+        "mean_gradient_norm": 0.5297952109438787
+      }
+    },
+    "30": {
+      "rnn": {
+        "macro_f1": 0.67735988603941,
+        "accuracy": 0.7647951441578149,
+        "mean_gradient_norm": 1.3603703815388932
+      },
+      "lstm": {
+        "macro_f1": 0.880665428423025,
+        "accuracy": 0.9377845220030349,
+        "mean_gradient_norm": 0.7142772852105692
+      },
+      "gru": {
+        "macro_f1": 0.892462574259072,
+        "accuracy": 0.9514415781487102,
+        "mean_gradient_norm": 0.462492058628089
+      }
+    }
+  },
+  "keyword_holdout": {
+    "chicken": {
+      "held_out_rows": 131,
+      "accuracy": 0.10687022900763359,
+      "majority_baseline": 1.0,
+      "true_class": "Non-Vegetarian"
+    },
+    "cheese": {
+      "held_out_rows": 118,
+      "accuracy": 0.2457627118644068,
+      "majority_baseline": 0.7372881355932204,
+      "true_class": "Vegetarian"
+    },
+    "beef": {
+      "held_out_rows": 102,
+      "accuracy": 0.27450980392156865,
+      "majority_baseline": 1.0,
+      "true_class": "Non-Vegetarian"
+    },
+    "milk": {
+      "held_out_rows": 27,
+      "accuracy": 0.3333333333333333,
+      "majority_baseline": 0.5555555555555556,
+      "true_class": "Vegetarian"
+    }
+  },
+  "mlp_comparison": {
+    "accuracy": 0.8679817905918058,
+    "macro_f1": 0.7258960207738582,
+    "weighted_f1": 0.8637375627618682,
+    "per_class": {
+      "Non-Vegetarian": {
+        "precision": 0.7544910179640718,
+        "recall": 0.8344370860927153,
+        "f1": 0.7924528301886793,
+        "support": 151
+      },
+      "Vegetarian": {
+        "precision": 0.7058823529411765,
+        "recall": 0.35294117647058826,
+        "f1": 0.47058823529411764,
+        "support": 34
+      },
+      "Vegan": {
+        "precision": 0.9136842105263158,
+        "recall": 0.9156118143459916,
+        "f1": 0.9146469968387777,
+        "support": 474
+      }
+    },
+    "confusion": [
+      [
+        126,
+        0,
+        25
+      ],
+      [
+        6,
+        12,
+        16
+      ],
+      [
+        35,
+        5,
+        434
+      ]
+    ],
+    "report": "                precision    recall  f1-score   support\n\nNon-Vegetarian      0.754     0.834     0.792       151\n    Vegetarian      0.706     0.353     0.471        34\n         Vegan      0.914     0.916     0.915       474\n\n      accuracy                          0.868       659\n     macro avg      0.791     0.701     0.726       659\n  weighted avg      0.866     0.868     0.864       659\n"
+  },
+  "runtime_seconds": 716.1
+}
