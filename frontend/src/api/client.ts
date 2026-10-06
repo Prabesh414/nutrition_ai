@@ -181,10 +181,20 @@ export const api = {
     return request<ApiFood[]>(`/foods?${params.toString()}`, { auth: false, signal });
   },
 
-  recommendations(arg?: string | AbortSignal, maybeSignal?: AbortSignal): Promise<ApiRecommendationsResponse> {
-    const logDate = typeof arg === 'string' ? arg : undefined;
-    const signal = arg instanceof AbortSignal ? arg : maybeSignal;
-    const query = logDate ? `?log_date=${encodeURIComponent(logDate)}` : '';
+  recommendations(
+    arg?: string | { logDate?: string; cuisine?: string; signal?: AbortSignal } | AbortSignal,
+    maybeSignal?: AbortSignal,
+  ): Promise<ApiRecommendationsResponse> {
+    const isOptions = typeof arg === 'object' && !(arg instanceof AbortSignal);
+    const logDate = isOptions ? arg.logDate : typeof arg === 'string' ? arg : undefined;
+    const cuisine = isOptions ? arg.cuisine : undefined;
+    const signal = arg instanceof AbortSignal ? arg : isOptions ? arg.signal : maybeSignal;
+
+    const params = new URLSearchParams();
+    if (logDate) params.set('log_date', logDate);
+    if (cuisine && cuisine !== 'All') params.set('cuisine', cuisine);
+    const query = params.toString() ? `?${params.toString()}` : '';
+
     return request<ApiRecommendationsResponse>(`/recommendations${query}`, { signal });
   },
 

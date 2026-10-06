@@ -29,6 +29,7 @@ FALLBACK_TARGETS = {
 @router.get("", response_model=PersonalizedRecommendationsResponse)
 def get_recommendations(
     log_date: date | None = Query(None, description="Calendar day; defaults to today"),
+    cuisine: str | None = Query(None, description="Cuisine region filter e.g. South Asian, East Asian, Western, Global"),
     limit: int = Query(12, ge=1, le=50),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -82,6 +83,7 @@ def get_recommendations(
         target_fat=next_meal["fat"],
         target_fiber=next_meal["fiber"],
         dietary_preference=dietary_preference,
+        cuisine=cuisine,
         k=limit,
     )
 

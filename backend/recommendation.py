@@ -73,7 +73,7 @@ def _catalogue_fingerprint(db: Session) -> tuple:
     return (int(row[0] or 0), int(row[1] or 0))
 
 
-def _load_frame(db: Session, preference: str) -> pd.DataFrame:
+def _load_frame(db: Session, preference: str, cuisine: Optional[str] = None) -> pd.DataFrame:
     from backend.database import FoodItem
 
     query = db.query(FoodItem)
@@ -81,6 +81,9 @@ def _load_frame(db: Session, preference: str) -> pd.DataFrame:
         query = query.filter(FoodItem.is_vegetarian.is_(True))
     elif preference == "vegan":
         query = query.filter(FoodItem.is_vegan.is_(True))
+
+    if cuisine and cuisine.strip().lower() != "all":
+        query = query.filter(FoodItem.region.ilike(cuisine.strip()))
 
     records = [
         {
@@ -129,21 +132,26 @@ def _quality_scores(frame: pd.DataFrame) -> pd.Series:
     ).clip(0.0, 1.0)
 
 
-def _get_index(db: Session, preference: str) -> Optional[_Index]:
+def _get_index(db: Session, preference: str, cuisine: Optional[str] = None) -> Optional[_Index]:
     """Return a cached index for this dietary slice, rebuilding if stale.
 
     The scaler and neighbour model were previously refit on every request,
     which meant a full table scan plus a fresh fit per API call.
     """
     fingerprint = _catalogue_fingerprint(db)
+    norm_cuisine = cuisine.strip().lower() if cuisine and cuisine.strip().lower() != "all" else "all"
+    cache_key = preference if norm_cuisine == "all" else f"{preference}_{norm_cuisine}"
 
     with _CACHE_LOCK:
-        cached = _INDEX_CACHE.get(preference)
+        cached = _INDEX_CACHE.get(cache_key)
         if cached is not None and cached.fingerprint == fingerprint:
             return cached
 
-    frame = _load_frame(db, preference)
+    frame = _load_frame(db, preference, cuisine)
     if frame.empty:
+        # Fallback to general index if filtered region is empty for this diet
+        if norm_cuisine != "all":
+            return _get_index(db, preference, None)
         return None
 
     frame["quality_score"] = _quality_scores(frame)
@@ -156,7 +164,7 @@ def _get_index(db: Session, preference: str) -> Optional[_Index]:
 
     index = _Index(frame=frame, scaler=scaler, model=model, fingerprint=fingerprint)
     with _CACHE_LOCK:
-        _INDEX_CACHE[preference] = index
+        _INDEX_CACHE[cache_key] = index
     return index
 
 
@@ -175,6 +183,7 @@ def recommend_food(
     target_fat: float,
     target_fiber: float = 0.0,
     dietary_preference: str = "None",
+    cuisine: Optional[str] = None,
     k: int = 12,
 ) -> list[dict]:
     """Return the ``k`` catalogue items closest to a single-meal nutrient target.
@@ -183,7 +192,7 @@ def recommend_food(
     opening a second connection per call.
     """
     preference = _normalise_preference(dietary_preference)
-    index = _get_index(db, preference)
+    index = _get_index(db, preference, cuisine)
     if index is None:
         return []
 

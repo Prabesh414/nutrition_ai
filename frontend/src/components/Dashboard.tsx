@@ -259,20 +259,45 @@ const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'
 
 function RecommendationsCard({
   profile,
-  recommendations,
-  loadingRecommendations,
+  recommendations: initialRecommendations,
+  loadingRecommendations: initialLoading,
+  selectedDate,
   onLogMeal,
-}: Pick<DashboardProps, 'profile' | 'recommendations' | 'loadingRecommendations' | 'onLogMeal'>) {
+}: Pick<DashboardProps, 'profile' | 'recommendations' | 'loadingRecommendations' | 'selectedDate' | 'onLogMeal'>) {
   const [mealToLog, setMealToLog] = useState<ApiFood | null>(null);
   const [modalSlot, setModalSlot] = useState<MealType>(() => suggestedMealType());
   const [modalQuantity, setModalQuantity] = useState<number>(1);
   const [savingMeal, setSavingMeal] = useState(false);
   const [cuisineFilter, setCuisineFilter] = useState<string>('All');
+  const [cuisineRecs, setCuisineRecs] = useState<ApiRecommendation[] | null>(null);
+  const [loadingCuisine, setLoadingCuisine] = useState(false);
 
-  const filteredRecs = recommendations.filter((food) => {
-    if (cuisineFilter === 'All') return true;
-    return food.region.toLowerCase() === cuisineFilter.toLowerCase();
-  });
+  // When cuisine filter changes to a specific region, query k-NN specifically within that cuisine
+  useEffect(() => {
+    if (cuisineFilter === 'All') {
+      setCuisineRecs(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingCuisine(true);
+    api
+      .recommendations({ logDate: selectedDate, cuisine: cuisineFilter })
+      .then((res) => {
+        if (!cancelled) setCuisineRecs(res.recommendations);
+      })
+      .catch(() => {
+        if (!cancelled) setCuisineRecs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCuisine(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, cuisineFilter]);
+
+  const activeRecs = cuisineFilter === 'All' ? initialRecommendations : (cuisineRecs ?? []);
+  const isLoading = cuisineFilter === 'All' ? initialLoading : loadingCuisine;
 
   return (
     <div className="dashboard-card recommendations-card">
@@ -306,18 +331,18 @@ function RecommendationsCard({
       </div>
 
       <div className="recommended-meals-list">
-        {loadingRecommendations && (
-          <p className="empty-logs-text">Loading personalized recommendations…</p>
+        {isLoading && (
+          <p className="empty-logs-text">Loading {cuisineFilter !== 'All' ? `${cuisineFilter} ` : ''}recommendations…</p>
         )}
 
-        {!loadingRecommendations && filteredRecs.length === 0 && (
+        {!isLoading && activeRecs.length === 0 && (
           <p className="empty-logs-text">
             No recommendations matching {cuisineFilter !== 'All' ? `the ${cuisineFilter} filter` : 'your profile'}.
           </p>
         )}
 
-        {!loadingRecommendations &&
-          filteredRecs.map((food) => (
+        {!isLoading &&
+          activeRecs.map((food) => (
             <div key={food.id} className="recommended-meal-item">
               <div className="rec-item-header">
                 <div className="rec-title-wrap">
@@ -668,6 +693,7 @@ export function Dashboard({
             profile={profile}
             recommendations={recommendations}
             loadingRecommendations={loadingRecommendations}
+            selectedDate={selectedDate}
             onLogMeal={onLogMeal}
           />
 
