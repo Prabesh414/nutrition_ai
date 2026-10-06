@@ -28,10 +28,13 @@ NON_VEG_KEYWORDS = [
     "shashlik", "kabob", "kebab", "pepperoni", "salami", "ham", "prawn", "anchovy",
     "sardine", "gelatin", "lard", "duck", "veal", "octopus", "squid", "clam",
     "oyster", "scallop", "milkfish", "sausage", "pastrami", "jerky", "liver",
+    "tripe", "ostrich", "emu",
     # Composite dishes whose names never mention the meat they contain.
     "burger", "hamburger", "cheeseburger", "big mac", "whopper", "quarter pounder",
     "cold cut", "cold cuts", "hot dog", "corn dog", "nugget", "nuggets", "mcchicken",
     "meatloaf", "bologna", "bratwurst", "chorizo", "prosciutto", "gyro", "sloppy joe",
+    # Korean / East Asian meat dishes.
+    "bulgogi", "galbi", "galbitang", "samgyetang", "dakgalbi", "budae jjigae",
     # South Asian / Nepali meat terms. The dataset carries a large set of
     # regional dishes whose names give no hint to an English keyword list --
     # "buff" is buffalo, "masu" is meat, "mach" is fish.
@@ -133,6 +136,8 @@ def get_serving_size_heuristic(name: str) -> str:
     rules: list[tuple[tuple[str, ...], str]] = [
         (("oil", "ghee", "margarine", "lard", "shortening"), "1 tbsp (14g)"),
         (("powder", "spice", "salt", "pepper", "oregano", "grated"), "1 tbsp (5g)"),
+        (("cookie", "biscuit", "muffin", "donut", "doughnut", "bagel", "roll"), "1 piece / item"),
+        (("bread", "roti", "naan", "tortilla", "toast", "idli", "chilla", "crepe", "pancake"), "1 piece / slice"),
         (("juice", "beverage", "soup", "broth", "water", "tea", "coffee", "milk"), "1 cup (244g)"),
         (("yogurt", "yoghurt", "cottage cheese", "sour cream", "curd"), "1 cup (220g)"),
         (("rice", "oats", "oatmeal", "quinoa", "lentils", "beans", "millet",
@@ -146,8 +151,6 @@ def get_serving_size_heuristic(name: str) -> str:
         (("carrot", "tomato", "potato", "cucumber", "eggplant", "onion"), "1 medium item"),
         (("broccoli", "spinach", "kale", "cabbage", "lettuce", "cauliflower",
           "zucchini", "celery", "mushroom"), "1 cup chopped (~90g)"),
-        (("bread", "roti", "naan", "tortilla", "toast", "idli", "chilla",
-          "crepe", "pancake"), "1 piece / slice"),
         (("chicken", "beef", "pork", "salmon", "shrimp", "steak", "tuna", "turkey",
           "lamb", "mutton", "fish", "prawn", "sardine", "anchovy", "seafood"), "1 fillet / portion (~100g)"),
         (("butter",), "1 tbsp (14g)"),
@@ -168,14 +171,19 @@ def get_region_heuristic(name: str) -> str:
             "sel roti", "upma", "biryani", "curry", "tikka", "samosa", "dosa", "idli",
             "makhani", "palak", "rajma", "lassi", "gulab jamun", "raita", "korma", "bharta",
             "aloo", "channa", "ghee", "chapati", "tarkari", "ko achar", "sandheko",
-            "choila", "dhido", "bara", "yomari", "sukuti")),
+            "choila", "dhido", "bara", "yomari", "sukuti", "chowmein", "thukpa", "thenthuk",
+            "chatamari", "kwati", "alu tama", "bhutuwa", "kachila", "sekuwa", "bhat", "khaja", "nepali")),
         ("East Asian", (
             "sushi", "gyoza", "tofu", "tempeh", "ramen", "dim sum", "pho", "kimchi", "soy",
-            "miso", "teriyaki", "noodle", "wasabi", "wok", "stir-fry", "edamame", "matcha")),
+            "miso", "teriyaki", "noodle", "wasabi", "wok", "stir-fry", "edamame", "matcha",
+            "bulgogi", "galbi", "samgyetang", "jjigae", "bibimbap", "tteokbokki", "mandu",
+            "gimbap", "naengmyeon", "dango", "daifuku", "taiyaki", "mochi", "udon", "soba",
+            "sashimi", "bao")),
         ("Western", (
             "bacon", "turkey", "blueberry", "bagel", "pancake", "burger", "steak", "cereal",
             "oatmeal", "cheddar", "mozzarella", "parmesan", "feta", "pork", "beef", "ham",
-            "salami", "pepperoni", "spaghetti", "macaroni", "maple syrup", "cranberry")),
+            "salami", "pepperoni", "spaghetti", "macaroni", "maple syrup", "cranberry",
+            "pizza", "hot dog", "salad", "sandwich", "toast", "waffle")),
     ]
     for region, keywords in regions:
         if any(keyword in name_lower for keyword in keywords):
@@ -216,6 +224,36 @@ def load_dataset() -> pd.DataFrame:
     return preprocess_dataset(combined)
 
 
+def sync_food_classifications(db: Session) -> int:
+    """Ensure existing FoodItem rows reflect current classify_diet & region rules.
+
+    Updates is_vegetarian, is_vegan, region and serving_size if they diverge
+    from the current rules, without dropping the table or breaking meal logs.
+    """
+    from backend.database import FoodItem
+
+    items = db.query(FoodItem).all()
+    updated = 0
+    for item in items:
+        veg, vegan = classify_diet(item.name)
+        reg = get_region_heuristic(item.name)
+        serv = get_serving_size_heuristic(item.name)
+        if (
+            item.is_vegetarian != veg
+            or item.is_vegan != vegan
+            or item.region != reg
+            or item.serving_size != serv
+        ):
+            item.is_vegetarian = veg
+            item.is_vegan = vegan
+            item.region = reg
+            item.serving_size = serv
+            updated += 1
+    if updated:
+        db.commit()
+    return updated
+
+
 def seed_food_items(db: Session, *, force: bool = False) -> int:
     """Populate ``food_items`` from the CSVs; returns the row count inserted.
 
@@ -225,7 +263,10 @@ def seed_food_items(db: Session, *, force: bool = False) -> int:
 
     existing = db.query(FoodItem).count()
     if existing and not force:
+        # Sync classifications so newly added keywords update existing catalogues.
+        sync_food_classifications(db)
         return 0
+
 
     if existing and force:
         db.query(FoodItem).delete()

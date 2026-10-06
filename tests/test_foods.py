@@ -66,3 +66,38 @@ def test_overlong_query_is_rejected(client):
 def test_results_are_alphabetical(client):
     names = [item["name"] for item in client.get(f"{API}/foods?query=soy&limit=30").json()]
     assert names == sorted(names)
+
+
+def test_region_and_category_filters(client):
+    south_asian = client.get(f"{API}/foods?region=South Asian&limit=20").json()
+    assert south_asian
+    assert all(item["region"] == "South Asian" for item in south_asian)
+
+    non_veg = client.get(f"{API}/foods?category=non-vegetarian&limit=20").json()
+    assert non_veg
+    assert all(item["is_vegetarian"] is False for item in non_veg)
+
+
+def test_buff_chowmein_is_non_vegetarian(client):
+    results = client.get(f"{API}/foods?query=buff chowmein").json()
+    assert results
+    item = results[0]
+    assert item["is_vegetarian"] is False
+    assert item["is_vegan"] is False
+    assert item["region"] == "South Asian"
+
+
+def test_veg_chowmein_is_both_vegetarian_and_vegan(client):
+    results = client.get(f"{API}/foods?query=veg chowmein").json()
+    assert results
+    item = results[0]
+    assert item["is_vegetarian"] is True
+    assert item["is_vegan"] is True
+    assert item["region"] == "South Asian"
+
+    # Category filter vegetarian must include all vegan items since all vegan items are vegetarian
+    veg_results = client.get(f"{API}/foods?query=veg chowmein&category=vegetarian").json()
+    assert veg_results
+    assert veg_results[0]["is_vegetarian"] is True
+
+
