@@ -63,7 +63,7 @@ def generate(
     system_prompt: str,
     user_prompt: str,
     timeout: float,
-    max_output_tokens: int = 400,
+    max_output_tokens: int = 1500,
     temperature: float = 0.4,
 ) -> LLMReply:
     """Make exactly one generation attempt. Raises `LLMError` on any failure."""
@@ -74,6 +74,7 @@ def generate(
         "generationConfig": {
             "temperature": temperature,
             "maxOutputTokens": max_output_tokens,
+            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
 

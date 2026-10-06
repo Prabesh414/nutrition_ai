@@ -84,8 +84,8 @@ GEMINI_MODELS = [
 # Per-attempt timeout, and a ceiling on the whole failover walk. The budget
 # is what keeps a bad day from turning into a minutes-long wait: once it is
 # spent the coach answers from rules rather than trying every candidate.
-GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "8"))
-GEMINI_TOTAL_BUDGET_SECONDS = float(os.getenv("GEMINI_TOTAL_BUDGET_SECONDS", "12"))
+GEMINI_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "12"))
+GEMINI_TOTAL_BUDGET_SECONDS = float(os.getenv("GEMINI_TOTAL_BUDGET_SECONDS", "20"))
 
 MAX_PROFILE_IMAGE_BYTES = int(os.getenv("MAX_PROFILE_IMAGE_BYTES", str(512 * 1024)))
 
