@@ -42,6 +42,7 @@ function App() {
   const [searchResults, setSearchResults] = useState<ApiFood[]>([]);
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
@@ -58,13 +59,16 @@ function App() {
       if (!searchQuery.trim()) {
         setSearchResults([]);
         setSearched(false);
+        setSearchError(null);
         return;
       }
       setSearching(true);
+      setSearchError(null);
       try {
         setSearchResults(await api.searchFoods(searchQuery));
-      } catch {
+      } catch (err) {
         setSearchResults([]);
+        setSearchError(err instanceof Error ? err.message : 'Could not reach backend server.');
       } finally {
         setSearching(false);
         setSearched(true);
@@ -189,6 +193,7 @@ function App() {
           searchResults={searchResults}
           searched={searched}
           searching={searching}
+          searchError={searchError}
         />
       ) : (
         <div className="dashboard-container">
@@ -210,7 +215,15 @@ function App() {
               summary={dailyLog.summary}
               recommendations={dailyLog.recommendations}
               loadingRecommendations={dailyLog.loadingRecommendations}
+              history={dailyLog.history}
+              loadingHistory={dailyLog.loadingHistory}
+              selectedDate={dailyLog.selectedDate}
+              isToday={dailyLog.isToday}
               error={dailyLog.error}
+              onPrevDay={dailyLog.goToPreviousDay}
+              onNextDay={dailyLog.goToNextDay}
+              onToday={dailyLog.goToToday}
+              onSelectDate={dailyLog.setSelectedDate}
               onLogMeal={handleLogMeal}
               onRemoveMeal={dailyLog.removeMeal}
             />

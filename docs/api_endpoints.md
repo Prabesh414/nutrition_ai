@@ -39,6 +39,7 @@ A request with a missing, malformed or expired token returns `401`.
 | `POST` | `/meals` | ✔ | Log a meal |
 | `DELETE` | `/meals/{meal_id}` | ✔ | Delete one of *your own* meals |
 | `GET` | `/meals/summary` | ✔ | Consumed / target / remaining for a day |
+| `GET` | `/meals/history` | ✔ | Multi-day intake analytics and trends |
 | `GET` | `/foods` | — | Search the food catalogue |
 | `GET` | `/recommendations` | ✔ | Personalised food recommendations |
 | `POST` | `/chat` | ✔ | Ask the nutrition coach |
@@ -178,12 +179,37 @@ another user, so ids cannot be probed to discover other people's data.
 
 `remaining` is floored at zero. This endpoint backs the dashboard progress bars.
 
+### `GET /meals/history?days=7&end_date=YYYY-MM-DD` → `200`
+
+Aggregates calorie and macronutrient intake for each day in the requested window (up to 30 days, defaults to 7 days up to `end_date` or today).
+
+```json
+{
+  "days": [
+    {
+      "date": "2026-09-10",
+      "calories_consumed": 1820.0,
+      "calories_target": 2000.0,
+      "protein_g": 92.0,
+      "carbs_g": 210.0,
+      "fat_g": 58.0,
+      "fiber_g": 22.0,
+      "meal_count": 3
+    }
+  ]
+}
+```
+
+This endpoint powers the 7-day intake analytics and trend visualizations.
+
 ---
 
-### `GET /foods?query=&vegetarian=&vegan=&limit=` → `200`
+### `GET /foods?query=&region=&category=&vegetarian=&vegan=&limit=` → `200`
 
 Public, because the catalogue is reference data rather than user data. `query`
 matches a case-insensitive name fragment with `LIKE` wildcards escaped;
+`region` accepts cuisine filters (`South Asian`, `East Asian`, `Western`, `Global`);
+`category` accepts `vegan`, `vegetarian`, or `non-vegetarian`;
 `limit` is 1–200 and defaults to 50.
 
 ```json

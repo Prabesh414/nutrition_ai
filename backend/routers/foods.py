@@ -13,6 +13,8 @@ def search_foods(
     query: str | None = Query(None, max_length=100, description="Case-insensitive name fragment"),
     vegetarian: bool | None = Query(None),
     vegan: bool | None = Query(None),
+    region: str | None = Query(None, description="Cuisine region filter e.g. South Asian, East Asian, Western, Global"),
+    category: str | None = Query(None, description="Dietary category: vegan, vegetarian, non-vegetarian"),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
@@ -23,6 +25,18 @@ def search_foods(
         # ilike escapes nothing by default, so neutralise wildcards in user input.
         term = query.strip().lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         statement = statement.filter(FoodItem.name.ilike(f"%{term}%", escape="\\"))
+
+    if region and region.strip() and region.strip().lower() != "all":
+        statement = statement.filter(FoodItem.region.ilike(region.strip()))
+
+    if category:
+        cat = category.strip().lower()
+        if cat == "vegan":
+            statement = statement.filter(FoodItem.is_vegan.is_(True))
+        elif cat == "vegetarian":
+            statement = statement.filter(FoodItem.is_vegetarian.is_(True))
+        elif cat in {"non-vegetarian", "non_vegetarian", "nonveg", "non-veg"}:
+            statement = statement.filter(FoodItem.is_vegetarian.is_(False))
 
     if vegetarian:
         statement = statement.filter(FoodItem.is_vegetarian.is_(True))

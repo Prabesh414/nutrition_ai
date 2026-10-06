@@ -15,12 +15,14 @@ interface LandingProps {
   searchResults: ApiFood[];
   searched: boolean;
   searching: boolean;
+  searchError?: string | null;
 }
 
-function dietLabel(food: ApiFood): string {
-  if (food.is_vegan) return 'Vegan';
-  if (food.is_vegetarian) return 'Vegetarian';
-  return 'Non-Vegetarian';
+
+function dietBadge(food: ApiFood): string {
+  if (food.is_vegan) return '🌿 Vegan (Veg)';
+  if (food.is_vegetarian) return '🥛 Vegetarian';
+  return '🥩 Non-Veg';
 }
 
 function Hero({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarted' | 'onSelectSection'>) {
@@ -118,6 +120,9 @@ function Hero({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarte
   );
 }
 
+const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'] as const;
+const DIET_OPTIONS = ['All', 'Vegan', 'Vegetarian', 'Non-Vegetarian'] as const;
+
 function FoodSearch({
   searchQuery,
   onSearchQueryChange,
@@ -125,7 +130,34 @@ function FoodSearch({
   searchResults,
   searched,
   searching,
-}: Pick<LandingProps, 'searchQuery' | 'onSearchQueryChange' | 'onSearch' | 'searchResults' | 'searched' | 'searching'>) {
+  searchError,
+}: Pick<LandingProps, 'searchQuery' | 'onSearchQueryChange' | 'onSearch' | 'searchResults' | 'searched' | 'searching' | 'searchError'>) {
+  const [selectedCuisine, setSelectedCuisine] = useState<string>('All');
+  const [selectedDiet, setSelectedDiet] = useState<string>('All');
+
+  const filteredResults = searchResults.filter((food) => {
+    const matchesCuisine =
+      selectedCuisine === 'All' || food.region.toLowerCase() === selectedCuisine.toLowerCase();
+
+    let matchesDiet = true;
+    if (selectedDiet === 'Vegan') {
+      matchesDiet = food.is_vegan;
+    } else if (selectedDiet === 'Vegetarian') {
+      // Anything vegan is also vegetarian by definition (no meat/poultry/fish).
+      matchesDiet = food.is_vegetarian;
+    } else if (selectedDiet === 'Non-Vegetarian') {
+      matchesDiet = !food.is_vegetarian;
+    }
+
+    return matchesCuisine && matchesDiet;
+  });
+
+  const handleFormSubmit = (event: React.FormEvent) => {
+    setSelectedCuisine('All');
+    setSelectedDiet('All');
+    onSearch(event);
+  };
+
   return (
     <section className="search-section">
       <div className="search-header">
@@ -137,11 +169,11 @@ function FoodSearch({
         </p>
       </div>
 
-      <form onSubmit={onSearch} className="search-bar-container">
+      <form onSubmit={handleFormSubmit} className="search-bar-container">
         <input
           type="text"
           className="search-input"
-          placeholder="Search food items (e.g. Oatmeal, Eggs, Chicken...)"
+          placeholder="Search food items (e.g. Oatmeal, Chowmein, Momos, Dal Bhat...)"
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
           aria-label="Search food items"
@@ -151,13 +183,56 @@ function FoodSearch({
         </button>
       </form>
 
+      {searchError && (
+        <div className="search-error-banner" role="alert">
+          <span>⚠️</span>
+          <span>{searchError}</span>
+        </div>
+      )}
+
       {searched && (
         <div className="results-container">
-          {searchResults.length > 0 ? (
+          {/* Filter chips bar */}
+          <div className="search-filters-bar">
+            <div className="search-filter-group">
+              <span className="search-filter-label">Cuisine:</span>
+              <div className="search-filter-chips">
+                {CUISINE_OPTIONS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`search-filter-chip ${selectedCuisine === c ? 'active' : ''}`}
+                    onClick={() => setSelectedCuisine(c)}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="search-filter-group">
+              <span className="search-filter-label">Diet:</span>
+              <div className="search-filter-chips">
+                {DIET_OPTIONS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`search-filter-chip ${selectedDiet === d ? 'active' : ''}`}
+                    onClick={() => setSelectedDiet(d)}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {filteredResults.length > 0 ? (
             <table className="results-table">
               <thead>
                 <tr>
                   <th>Food Item</th>
+                  <th>Cuisine</th>
                   <th>Serving Size</th>
                   <th>Category</th>
                   <th>Calories</th>
@@ -167,11 +242,35 @@ function FoodSearch({
                 </tr>
               </thead>
               <tbody>
-                {searchResults.map((food) => (
+                {filteredResults.map((food) => (
                   <tr key={food.id}>
                     <td className="food-name-cell">{food.name}</td>
-                    <td><span className="serving-size-cell">{food.serving_size}</span></td>
-                    <td><span className="category-badge">{dietLabel(food)}</span></td>
+                    <td>
+                      <span className="cuisine-badge">{food.region}</span>
+                    </td>
+                    <td>
+                      <span className="serving-size-cell">{food.serving_size}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`category-badge category-${
+                          food.is_vegan
+                            ? 'vegan'
+                            : food.is_vegetarian
+                            ? 'vegetarian'
+                            : 'non-veg'
+                        }`}
+                        title={
+                          food.is_vegan
+                            ? 'Vegan: 100% plant-based, suitable for vegetarians'
+                            : food.is_vegetarian
+                            ? 'Vegetarian: Contains dairy/honey, no meat or seafood'
+                            : 'Non-Vegetarian: Contains meat, poultry, or seafood'
+                        }
+                      >
+                        {dietBadge(food)}
+                      </span>
+                    </td>
                     <td className="calorie-cell">{food.calories} kcal</td>
                     <td>{food.protein}g</td>
                     <td>{food.carbohydrates}g</td>
@@ -180,9 +279,23 @@ function FoodSearch({
                 ))}
               </tbody>
             </table>
+          ) : searchResults.length > 0 ? (
+            <div className="no-results">
+              No items match the &quot;{selectedCuisine}&quot; cuisine and &quot;{selectedDiet}&quot; diet filter.
+              <button
+                type="button"
+                className="btn-filter-reset"
+                onClick={() => {
+                  setSelectedCuisine('All');
+                  setSelectedDiet('All');
+                }}
+              >
+                Clear filters to show all {searchResults.length} results
+              </button>
+            </div>
           ) : (
             <div className="no-results">
-              No food items found matching &quot;{searchQuery}&quot;. Try Oatmeal, Eggs, or Salmon.
+              No food items found matching &quot;{searchQuery}&quot;. Try Oatmeal, Chowmein, Momos, or Dal Bhat.
             </div>
           )}
         </div>

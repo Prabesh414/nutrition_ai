@@ -94,6 +94,15 @@ describe('request handling', () => {
     mockFetch(204, null);
     await expect(api.deleteMeal(1)).resolves.toBeUndefined();
   });
+
+  it('passes region and category filters to /foods', async () => {
+    const fetchSpy = mockFetch(200, []);
+    await api.searchFoods('chowmein', { region: 'South Asian', category: 'non-vegetarian' });
+    const url = String(fetchSpy.mock.calls[0]?.[0]);
+    expect(url).toContain('query=chowmein');
+    expect(url).toContain('region=South+Asian');
+    expect(url).toContain('category=non-vegetarian');
+  });
 });
 
 describe('localDateString', () => {
