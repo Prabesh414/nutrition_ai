@@ -263,9 +263,11 @@ function RecommendationsCard({
   loadingRecommendations,
   onLogMeal,
 }: Pick<DashboardProps, 'profile' | 'recommendations' | 'loadingRecommendations' | 'onLogMeal'>) {
-  const [logging, setLogging] = useState<number | null>(null);
+  const [mealToLog, setMealToLog] = useState<ApiFood | null>(null);
+  const [modalSlot, setModalSlot] = useState<MealType>(() => suggestedMealType());
+  const [modalQuantity, setModalQuantity] = useState<number>(1);
+  const [savingMeal, setSavingMeal] = useState(false);
   const [cuisineFilter, setCuisineFilter] = useState<string>('All');
-  const [selectedSlot, setSelectedSlot] = useState<MealType>(() => suggestedMealType());
 
   const filteredRecs = recommendations.filter((food) => {
     if (cuisineFilter === 'All') return true;
@@ -303,21 +305,6 @@ function RecommendationsCard({
         </div>
       </div>
 
-      {/* Slot selector for quick logging */}
-      <div className="rec-slot-selector">
-        <span>Log as:</span>
-        {MEAL_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            className={`rec-slot-btn ${selectedSlot === type ? 'active' : ''}`}
-            onClick={() => setSelectedSlot(type)}
-          >
-            {type}
-          </button>
-        ))}
-      </div>
-
       <div className="recommended-meals-list">
         {loadingRecommendations && (
           <p className="empty-logs-text">Loading personalized recommendations…</p>
@@ -341,18 +328,14 @@ function RecommendationsCard({
                 <button
                   type="button"
                   className="btn-log-recommendation"
-                  disabled={logging === food.id}
-                  onClick={async () => {
-                    setLogging(food.id);
-                    try {
-                      await onLogMeal(food, 1, selectedSlot);
-                    } finally {
-                      setLogging(null);
-                    }
+                  onClick={() => {
+                    setMealToLog(food);
+                    setModalSlot(suggestedMealType());
+                    setModalQuantity(1);
                   }}
-                  title={`Log ${food.name} as ${selectedSlot}`}
+                  title={`Log ${food.name}`}
                 >
-                  {logging === food.id ? '…' : `+ Log (${selectedSlot})`}
+                  + Log Meal
                 </button>
               </div>
 
@@ -388,6 +371,147 @@ function RecommendationsCard({
             </div>
           ))}
       </div>
+
+      {/* Modal asking for meal slot and quantity after clicking Log Meal */}
+      {mealToLog && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (!savingMeal) setMealToLog(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="modal-box log-recommendation-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setMealToLog(null)}
+              disabled={savingMeal}
+              aria-label="Close"
+            >
+              ×
+            </button>
+
+            <div className="log-rec-modal-header">
+              <span className="log-rec-modal-badge">{mealToLog.region}</span>
+              <h3 className="log-rec-modal-title">Log {mealToLog.name}</h3>
+              <p className="log-rec-modal-portion">Standard portion: {mealToLog.serving_size}</p>
+            </div>
+
+            <div className="log-rec-modal-form">
+              <div className="form-field-group">
+                <label className="field-label">Select Meal Slot:</label>
+                <div className="log-rec-slot-chips">
+                  {MEAL_TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={`log-rec-slot-chip ${modalSlot === type ? 'active' : ''}`}
+                      onClick={() => setModalSlot(type)}
+                      disabled={savingMeal}
+                    >
+                      {type === 'Breakfast'
+                        ? '🌅 Breakfast'
+                        : type === 'Lunch'
+                        ? '☀️ Lunch'
+                        : type === 'Dinner'
+                        ? '🌙 Dinner'
+                        : '🍎 Snack'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-field-group">
+                <label htmlFor="rec-modal-qty" className="field-label">Quantity / Servings:</label>
+                <div className="log-rec-qty-stepper">
+                  <button
+                    type="button"
+                    className="btn-stepper"
+                    disabled={modalQuantity <= 0.5 || savingMeal}
+                    onClick={() => setModalQuantity((q) => Math.max(0.5, Math.round((q - 0.5) * 10) / 10))}
+                  >
+                    −
+                  </button>
+                  <input
+                    id="rec-modal-qty"
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    max="10"
+                    className="text-input log-rec-qty-input"
+                    value={modalQuantity}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val) && val > 0) setModalQuantity(val);
+                    }}
+                    disabled={savingMeal}
+                  />
+                  <button
+                    type="button"
+                    className="btn-stepper"
+                    disabled={modalQuantity >= 10 || savingMeal}
+                    onClick={() => setModalQuantity((q) => Math.min(10, Math.round((q + 0.5) * 10) / 10))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="log-rec-macro-preview">
+                <div className="rec-preview-col">
+                  <span className="rec-preview-val">{Math.round(mealToLog.calories * modalQuantity)}</span>
+                  <span className="rec-preview-lbl">kcal</span>
+                </div>
+                <div className="rec-preview-col">
+                  <span className="rec-preview-val">{round(mealToLog.protein * modalQuantity)}g</span>
+                  <span className="rec-preview-lbl">Protein</span>
+                </div>
+                <div className="rec-preview-col">
+                  <span className="rec-preview-val">{round(mealToLog.carbohydrates * modalQuantity)}g</span>
+                  <span className="rec-preview-lbl">Carbs</span>
+                </div>
+                <div className="rec-preview-col">
+                  <span className="rec-preview-val">{round(mealToLog.fat * modalQuantity)}g</span>
+                  <span className="rec-preview-lbl">Fat</span>
+                </div>
+                <div className="rec-preview-col">
+                  <span className="rec-preview-val">{round(mealToLog.fiber * modalQuantity)}g</span>
+                  <span className="rec-preview-lbl">Fiber</span>
+                </div>
+              </div>
+
+              <div className="log-rec-modal-actions">
+                <button
+                  type="button"
+                  className="btn-flat-secondary"
+                  onClick={() => setMealToLog(null)}
+                  disabled={savingMeal}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-flat-primary"
+                  disabled={savingMeal}
+                  onClick={async () => {
+                    setSavingMeal(true);
+                    try {
+                      await onLogMeal(mealToLog, modalQuantity, modalSlot);
+                      setMealToLog(null);
+                    } finally {
+                      setSavingMeal(false);
+                    }
+                  }}
+                >
+                  {savingMeal ? 'Logging…' : `Log as ${modalSlot}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

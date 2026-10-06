@@ -2320,5 +2320,159 @@
   opacity: 0.88;
 }
 
+/* =========================================================
+   Log Recommendation Modal
+   ========================================================= */
+
+.log-recommendation-modal {
+  max-width: 460px;
+  border-radius: 12px;
+  background-color: #fff;
+  border: 1px solid var(--stone);
+  padding: 2rem 1.75rem;
+}
+
+.log-rec-modal-header {
+  margin-bottom: 1.25rem;
+}
+
+.log-rec-modal-badge {
+  background: var(--sand);
+  color: var(--bark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  border: 1px solid var(--stone);
+}
+
+.log-rec-modal-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--bark);
+  margin: 0 0 0.2rem;
+  line-height: 1.25;
+}
+
+.log-rec-modal-portion {
+  font-size: 0.82rem;
+  color: var(--earth);
+  margin: 0;
+}
+
+.log-rec-modal-form .form-field-group {
+  margin-bottom: 1.15rem;
+}
+
+.log-rec-slot-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.log-rec-slot-chip {
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  color: var(--bark);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.log-rec-slot-chip:hover {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.log-rec-slot-chip.active {
+  background: var(--bark);
+  color: #fff;
+  border-color: var(--bark);
+}
+
+.log-rec-qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.btn-stepper {
+  background: var(--sand);
+  border: 1px solid var(--stone);
+  color: var(--bark);
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.btn-stepper:hover:not(:disabled) {
+  background: var(--rust);
+  color: #fff;
+  border-color: var(--rust);
+}
+
+.btn-stepper:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.log-rec-qty-input {
+  width: 75px !important;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 !important;
+}
+
+.log-rec-macro-preview {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+  background: rgba(212, 163, 115, 0.12);
+  border: 1px solid var(--stone);
+  border-radius: 8px;
+  padding: 0.65rem 0.45rem;
+  margin: 1.25rem 0 1.5rem;
+  text-align: center;
+}
+
+.rec-preview-val {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--bark);
+}
+
+.rec-preview-lbl {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--earth);
+  letter-spacing: 0.02rem;
+}
+
+.log-rec-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 
 

@@ -15,6 +15,7 @@ This document tracks changes, documentation additions, and configuration updates
 - **Hierarchical dietary classification**: Fixed diet filtering so selecting `Vegetarian` properly includes all `Vegan` dishes (`is_vegan => is_vegetarian`), updated badge to `🌿 Vegan (Veg)` with descriptive tooltips, and resolved mutual exclusion bug.
 - **Catalog dietary synchronization**: Added `sync_food_classifications()` to keep existing database rows synchronized with keyword heuristics; resolved Buff Chowmein, Buff Choila, and meat dishes incorrectly marked as vegan.
 - **Oatmeal staple additions & serving size heuristics**: Added cooked oatmeal, oatmeal porridge, and rolled oats to the catalogue; refined household serving sizes so baked items (cookies, bread, bagels) receive discrete piece/slice portions.
+- **Recommendations log prompt modal**: Removed slot selector from top filter bar; clicking `+ Log Meal` now prompts with a dedicated modal for meal slot (`Breakfast`, `Lunch`, `Dinner`, `Snack`), servings stepper, and live macro preview before saving.
 - **Network error surfacing & search UX**: Added search error banner when backend is unreachable, automatic filter reset on new search queries, and a clear filters button when active filters hide matching results.
 - **[LLM provider](docs/llm_provider.md)**: Replaced Ollama with Gemini REST via failover chain across keys and models with time budgeting and model retirement.
 
