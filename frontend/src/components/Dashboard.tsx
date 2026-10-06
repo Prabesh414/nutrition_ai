@@ -134,11 +134,12 @@ function LogMealCard({
   return (
     <div className="dashboard-card log-meal-card">
       <div className="card-header-with-badge">
-        <h3>Log a Meal</h3>
-        <span className="pref-badge">
-          {isToday ? 'Today' : selectedDate}
-        </span>
+        <h3>🔍 Log from Food Database</h3>
+        <span className="pref-badge">Choose Your Own</span>
       </div>
+      <p className="recommendations-intro">
+        Search any food item or ingredient to log exact portions for {isToday ? 'today' : selectedDate}.
+      </p>
       {message && <p className="form-error">{message}</p>}
 
       <form onSubmit={handleSubmit} className="log-meal-form">
@@ -302,15 +303,16 @@ function RecommendationsCard({
   return (
     <div className="dashboard-card recommendations-card">
       <div className="card-header-with-badge">
-        <h3>Smart Diet Recommendations</h3>
+        <h3>✨ Tailored Meal Suggestions</h3>
         <span className="pref-badge">
-          {profile?.dietary_preference ?? 'None'} • {profile?.fitness_goal ?? 'Maintain Weight'}
+          {profile?.dietary_preference && profile.dietary_preference !== 'None'
+            ? `${profile.dietary_preference} • Tailored for You`
+            : 'Tailored for You'}
         </span>
       </div>
 
       <p className="recommendations-intro">
-        Retrieved using <strong>k-NN</strong> Euclidean proximity to your remaining targets and
-        re-ranked by nutrient density quality.
+        Smart food suggestions calculated to match your remaining calories and nutrients for today.
       </p>
 
       {/* Cuisine filter chips */}

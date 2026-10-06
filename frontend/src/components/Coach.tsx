@@ -146,7 +146,7 @@ export function CoachPanel({ coach }: { coach: CoachState }) {
       <div className="dashboard-card chatbot-card">
         <div className="card-header-with-badge">
           <h3>AI Nutrition Assistant</h3>
-          <span className="coach-mode-badge">Gemini-Powered</span>
+          <span className="coach-mode-badge">Active Assistant</span>
         </div>
         <div className="chatbot-chatbox">
           <MessageList messages={coach.messages} pending={coach.pending} onQuickPrompt={handlePrompt} />

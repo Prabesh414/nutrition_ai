@@ -359,9 +359,9 @@ function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetSt
   const cards = [
     {
       icon: '🎯',
-      heading: 'Smart k-NN Recommendations',
+      heading: 'Personalized Meal Suggestions',
       description:
-        'Food suggestions mathematically fitted to your BMR, TDEE, macro split, and regional cuisine preference using machine learning retrieval.',
+        'Smart food ideas tailored to your physical stats, daily calorie targets, and preferred regional cuisines.',
     },
     {
       icon: '📊',
@@ -371,27 +371,27 @@ function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetSt
     },
     {
       icon: '💬',
-      heading: 'Context-Aware AI Nutrition Coach',
+      heading: 'Personal AI Nutrition Coach',
       description:
-        'Chat with an intelligent coach powered by Gemini with model fallbacks that references your daily intake and targets in real time.',
+        'Chat with an intelligent nutritionist assistant that understands your profile, goals, and today\'s logged meals.',
     },
     {
       icon: '🌏',
       heading: 'Authentic Regional Cuisines',
       description:
-        'Diverse dietary support across South Asian, East Asian, Western, and Global culinary repertoires tailored for healthy living.',
+        'Explore healthy food choices across South Asian, East Asian, Western, and Global culinary traditions.',
     },
     {
       icon: '📈',
       heading: 'Historical Insights & Calendar',
       description:
-        'Navigate past logs with calendar date-picking, track daily calorie deficit/surplus, and inspect macro distributions.',
+        'Review past eating habits, track daily calorie balance, and monitor long-term nutritional consistency.',
     },
     {
       icon: '🌿',
       heading: 'Transparent Dietary Safety',
       description:
-        'Zero guesswork with clear tags for Vegan (100% plant-based), Lacto-Vegetarian, and Non-Vegetarian items.',
+        'Clear, unambiguous badges for Vegan (100% plant-based), Vegetarian, and Non-Vegetarian items.',
     },
   ];
 
@@ -401,7 +401,7 @@ function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetSt
         <span className="features-subtitle">Platform Capabilities</span>
         <h2 className="features-title">Everything you need for sustainable nutrition</h2>
         <p className="search-description">
-          Designed with clinical calculation standards and modern machine learning to support your wellness journey.
+          Built with proven nutritional principles to support your health and wellness journey.
         </p>
       </div>
 
