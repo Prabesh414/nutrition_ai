@@ -123,6 +123,19 @@ function Hero({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarte
 const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'] as const;
 const DIET_OPTIONS = ['All', 'Vegan', 'Vegetarian', 'Non-Vegetarian'] as const;
 
+const POPULAR_SEARCH_PRESETS = [
+  { label: '🥣 Oatmeal', query: 'Oatmeal' },
+  { label: '🥟 Momos', query: 'Momos' },
+  { label: '🍜 Chowmein', query: 'Chowmein' },
+  { label: '🍛 Dal Bhat', query: 'Dal' },
+  { label: '🍗 Chicken Breast', query: 'Chicken' },
+  { label: '🥗 Tofu', query: 'Tofu' },
+  { label: '🥚 Boiled Egg', query: 'Egg' },
+  { label: '🍚 Fried Rice', query: 'Rice' },
+  { label: '🥞 Pancakes', query: 'Pancake' },
+  { label: '🥑 Avocado Toast', query: 'Toast' },
+];
+
 function FoodSearch({
   searchQuery,
   onSearchQueryChange,
@@ -143,7 +156,6 @@ function FoodSearch({
     if (selectedDiet === 'Vegan') {
       matchesDiet = food.is_vegan;
     } else if (selectedDiet === 'Vegetarian') {
-      // Anything vegan is also vegetarian by definition (no meat/poultry/fish).
       matchesDiet = food.is_vegetarian;
     } else if (selectedDiet === 'Non-Vegetarian') {
       matchesDiet = !food.is_vegetarian;
@@ -158,14 +170,18 @@ function FoodSearch({
     onSearch(event);
   };
 
+  const handlePresetClick = (query: string) => {
+    onSearchQueryChange(query);
+  };
+
   return (
     <section className="search-section">
       <div className="search-header">
         <span className="features-subtitle">Nutrient Database</span>
         <h2 className="features-title">Analyze what you eat</h2>
         <p className="search-description">
-          Search our nutritional database to find calorie and macronutrient breakdowns for
-          everyday foods.
+          Search our comprehensive database to explore calorie breakdowns, macros, and dietary
+          categories across authentic regional cuisines.
         </p>
       </div>
 
@@ -179,9 +195,26 @@ function FoodSearch({
           aria-label="Search food items"
         />
         <button type="submit" className="btn-flat-primary search-btn" disabled={searching}>
-          {searching ? 'Searching…' : 'Search'}
+          {searching ? 'Searching…' : 'Search Database'}
         </button>
       </form>
+
+      {/* Quick Search Preset Tags */}
+      <div className="search-presets-bar">
+        <span className="search-presets-label">Popular:</span>
+        <div className="search-presets-chips">
+          {POPULAR_SEARCH_PRESETS.map((preset) => (
+            <button
+              key={preset.query}
+              type="button"
+              className="search-preset-chip"
+              onClick={() => handlePresetClick(preset.query)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {searchError && (
         <div className="search-error-banner" role="alert">
@@ -190,7 +223,7 @@ function FoodSearch({
         </div>
       )}
 
-      {searched && (
+      {searched ? (
         <div className="results-container">
           {/* Filter chips bar */}
           <div className="search-filters-bar">
@@ -295,43 +328,83 @@ function FoodSearch({
             </div>
           ) : (
             <div className="no-results">
-              No food items found matching &quot;{searchQuery}&quot;. Try Oatmeal, Chowmein, Momos, or Dal Bhat.
+              No food items found matching &quot;{searchQuery}&quot;. Try selecting one of the popular tags above.
             </div>
           )}
+        </div>
+      ) : (
+        <div className="search-placeholder-guide">
+          <div className="guide-card">
+            <div className="guide-icon">🔍</div>
+            <h3>Instant Food Lookup</h3>
+            <p>Type any ingredient or dish above to view exact calories, macros, and dietary classifications.</p>
+          </div>
+          <div className="guide-card">
+            <div className="guide-icon">🌏</div>
+            <h3>Cuisine Awareness</h3>
+            <p>Filter foods across South Asian, East Asian, Western, and Global culinary traditions.</p>
+          </div>
+          <div className="guide-card">
+            <div className="guide-icon">🌱</div>
+            <h3>Diet Transparency</h3>
+            <p>Precise vegan and vegetarian labeling ensuring every meal fits your nutritional lifestyle.</p>
+          </div>
         </div>
       )}
     </section>
   );
 }
 
-function Features() {
+function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarted' | 'onSelectSection'>) {
   const cards = [
     {
       icon: '🎯',
-      heading: 'Personalized Recommendations',
+      heading: 'Smart k-NN Recommendations',
       description:
-        'Food suggestions generated for your physical profile, calorie targets and dietary preferences.',
+        'Food suggestions mathematically fitted to your BMR, TDEE, macro split, and regional cuisine preference using machine learning retrieval.',
     },
     {
       icon: '📊',
-      heading: 'Track & Monitor',
+      heading: 'Daily Macro & Calorie Tracking',
       description:
-        'Log daily meals, see your protein, carbohydrate and fat breakdown, and watch progress against your targets.',
+        'Log breakfast, lunch, dinner, and snacks with live portion calculations and progress meters towards your health targets.',
     },
     {
       icon: '💬',
-      heading: 'AI Nutrition Coach',
+      heading: 'Context-Aware AI Nutrition Coach',
       description:
-        'Ask nutrition questions and get answers that draw on your own profile and what you have eaten today.',
+        'Chat with an intelligent coach powered by Gemini with model fallbacks that references your daily intake and targets in real time.',
+    },
+    {
+      icon: '🌏',
+      heading: 'Authentic Regional Cuisines',
+      description:
+        'Diverse dietary support across South Asian, East Asian, Western, and Global culinary repertoires tailored for healthy living.',
+    },
+    {
+      icon: '📈',
+      heading: 'Historical Insights & Calendar',
+      description:
+        'Navigate past logs with calendar date-picking, track daily calorie deficit/surplus, and inspect macro distributions.',
+    },
+    {
+      icon: '🌿',
+      heading: 'Transparent Dietary Safety',
+      description:
+        'Zero guesswork with clear tags for Vegan (100% plant-based), Lacto-Vegetarian, and Non-Vegetarian items.',
     },
   ];
 
   return (
     <section className="features-section">
       <div className="features-header">
-        <span className="features-subtitle">Features Overview</span>
-        <h2 className="features-title">Everything you need to reach your goals</h2>
+        <span className="features-subtitle">Platform Capabilities</span>
+        <h2 className="features-title">Everything you need for sustainable nutrition</h2>
+        <p className="search-description">
+          Designed with clinical calculation standards and modern machine learning to support your wellness journey.
+        </p>
       </div>
+
       <div className="cards-grid">
         {cards.map((card) => (
           <div className="feature-card" key={card.heading}>
@@ -340,6 +413,21 @@ function Features() {
             <p className="card-desc">{card.description}</p>
           </div>
         ))}
+      </div>
+
+      <div className="features-cta-banner">
+        <div className="cta-banner-content">
+          <h3>Ready to take control of your daily nutrition?</h3>
+          <p>Join thousands optimizing their energy, fitness, and vitality with personalized meal intelligence.</p>
+        </div>
+        <div className="cta-banner-buttons">
+          <button className="btn-flat-primary" onClick={onGetStarted}>
+            Get Started Free
+          </button>
+          <button className="btn-flat-secondary" onClick={() => onSelectSection('search')}>
+            Explore Food Database
+          </button>
+        </div>
       </div>
     </section>
   );
@@ -351,5 +439,5 @@ export function Landing(props: LandingProps) {
     return <Hero onGetStarted={props.onGetStarted} onSelectSection={props.onSelectSection} />;
   }
   if (section === 'search') return <FoodSearch {...props} />;
-  return <Features />;
+  return <Features onGetStarted={props.onGetStarted} onSelectSection={props.onSelectSection} />;
 }

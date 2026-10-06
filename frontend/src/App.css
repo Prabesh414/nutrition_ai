@@ -2778,6 +2778,153 @@
   }
 }
 
+/* Search Presets Chips */
+.search-presets-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  max-width: 800px;
+  margin: 0 auto 2.5rem;
+}
 
+.search-presets-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  color: var(--earth);
+}
 
+.search-presets-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
 
+.search-preset-chip {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid var(--stone);
+  background: var(--warm-white);
+  color: var(--bark);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(45, 33, 24, 0.04);
+}
+
+.search-preset-chip:hover {
+  background: var(--rust);
+  color: #fff;
+  border-color: var(--rust);
+  transform: translateY(-1px);
+}
+
+/* Search Placeholder Guide */
+.search-placeholder-guide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.guide-card {
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 12px;
+  padding: 2.25rem 1.75rem;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(45, 33, 24, 0.03);
+}
+
+.guide-icon {
+  font-size: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+.guide-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--bark);
+  margin-bottom: 0.5rem;
+}
+
+.guide-card p {
+  font-size: 0.9rem;
+  color: var(--earth);
+  line-height: 1.5;
+}
+
+/* Features CTA Banner */
+.features-cta-banner {
+  background: linear-gradient(135deg, var(--bark), #3d2b1f);
+  color: var(--cream);
+  border-radius: 16px;
+  padding: 3rem 2.5rem;
+  margin-top: 3.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  box-shadow: 0 12px 32px rgba(45, 33, 24, 0.15);
+}
+
+.cta-banner-content h3 {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.cta-banner-content p {
+  color: var(--sand);
+  font-size: 0.95rem;
+  max-width: 580px;
+  line-height: 1.5;
+}
+
+.cta-banner-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Full-Page AI Coach Layout */
+.coach-tab-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.coach-tab-container .chatbot-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 250px);
+  min-height: 520px;
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(45, 33, 24, 0.05);
+}
+
+.coach-tab-container .chatbot-chatbox {
+  flex: 1;
+  min-height: 320px;
+  overflow-y: auto;
+  background: var(--cream);
+  border: 1px solid var(--stone);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
