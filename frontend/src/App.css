@@ -1164,7 +1164,9 @@
 /* ---- FOOTER ---- */
 .root-footer {
   background-color: var(--bark);
-  padding: 1.5rem 5rem;
+  padding: 1.5rem 2rem;
+  margin-top: auto;
+  width: 100%;
 }
 
 .footer-content {
@@ -1173,7 +1175,9 @@
   align-items: center;
   font-size: 0.82rem;
   color: var(--sand);
-  opacity: 0.7;
+  opacity: 0.8;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* ---- SMART RECOMMENDATIONS CARD ---- */
@@ -2473,6 +2477,307 @@
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+/* =========================================
+   SEARCH FOODS & FEATURES SECTIONS
+   ========================================= */
+
+.search-section,
+.features-section {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-header,
+.features-header {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 2.25rem;
+}
+
+.search-description {
+  font-size: 1rem;
+  color: var(--earth);
+  line-height: 1.55;
+  margin-top: 0.5rem;
+}
+
+.search-bar-container {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto 2rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.85rem 1.25rem;
+  font-size: 1rem;
+  font-family: var(--font-body);
+  border: 1.5px solid var(--stone);
+  border-radius: 999px;
+  background: var(--warm-white);
+  color: var(--bark);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 3px rgba(184, 80, 54, 0.15);
+}
+
+.search-btn {
+  border-radius: 999px;
+  padding: 0.85rem 1.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.search-error-banner {
+  max-width: 700px;
+  margin: 0 auto 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #fde8e8;
+  border: 1px solid #f8b4b4;
+  border-radius: 8px;
+  color: #9b1c1c;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.results-container {
+  width: 100%;
+  margin-top: 1rem;
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(45, 33, 24, 0.04);
+  overflow-x: auto;
+}
+
+.search-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--stone);
+}
+
+.search-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.search-filter-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  color: var(--earth);
+}
+
+.search-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.search-filter-chip {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: 1px solid var(--stone);
+  background: var(--cream);
+  color: var(--earth);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-filter-chip:hover {
+  border-color: var(--rust);
+  color: var(--bark);
+  background: var(--sand);
+}
+
+.search-filter-chip.active {
+  background: var(--rust);
+  color: #fff;
+  border-color: var(--rust);
+  font-weight: 600;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.results-table th {
+  background: var(--sand);
+  color: var(--bark);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.02rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--stone);
+}
+
+.results-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--sand);
+  color: var(--bark);
+}
+
+.results-table tbody tr:hover {
+  background: rgba(237, 232, 223, 0.4);
+}
+
+.food-name-cell {
+  font-weight: 600;
+  color: var(--bark);
+}
+
+.cuisine-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  background: rgba(115, 87, 62, 0.1);
+  color: var(--earth);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.serving-size-cell {
+  color: var(--earth);
+  font-size: 0.85rem;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.category-vegan {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.category-vegetarian {
+  background: #fff8e1;
+  color: #f57f17;
+  border: 1px solid #ffecb3;
+}
+
+.category-non-veg {
+  background: #fbe9e7;
+  color: #d84315;
+  border: 1px solid #ffccbc;
+}
+
+.calorie-cell {
+  font-weight: 700;
+  color: var(--bark);
+}
+
+.no-results {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--earth);
+  font-size: 0.95rem;
+}
+
+.btn-filter-reset {
+  display: block;
+  margin: 0.75rem auto 0;
+  background: none;
+  border: none;
+  color: var(--rust);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Features Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.feature-card {
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 12px;
+  padding: 2rem 1.75rem;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--rust);
+  box-shadow: 0 8px 24px rgba(45, 33, 24, 0.08);
+}
+
+.card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.card-heading {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--bark);
+  margin-bottom: 0.65rem;
+}
+
+.card-desc {
+  font-size: 0.9rem;
+  color: var(--earth);
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .search-bar-container {
+    flex-direction: column;
+  }
+  .search-btn {
+    width: 100%;
+  }
+}
+
 
 
 
