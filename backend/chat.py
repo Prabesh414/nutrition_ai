@@ -97,6 +97,14 @@ def rule_based_reply(message: str, profile: Optional[dict], consumed: Optional[d
             "doctor for advice specific to your condition."
         )
 
+    greetings = {"hi", "hello", "hey", "good morning", "good afternoon", "good evening", "howdy"}
+    if any(lower.strip() == g or lower.strip().startswith(f"{g} ") or lower.strip().startswith(f"{g}!") for g in greetings):
+        name_part = f", {display_name}" if display_name else ""
+        return (
+            f"Hello{name_part}! I'm your AI Nutrition Coach. How can I help you today? "
+            "You can ask about your calorie budget, daily protein target, meal ideas, or how your logged foods compare against your goals."
+        )
+
     if "water" in lower or "hydrat" in lower:
         return (
             "Hydration matters. Around 2.5-3 litres of water a day is a reasonable "
