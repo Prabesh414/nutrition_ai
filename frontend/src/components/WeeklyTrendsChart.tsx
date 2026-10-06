@@ -39,17 +39,26 @@ export function WeeklyTrendsChart({ history, loading }: WeeklyTrendsChartProps) 
   const defaultTarget = targets[targets.length - 1] ?? 2000;
 
   const maxCal = Math.max(
-    defaultTarget * 1.25,
+    defaultTarget * 1.35,
     ...history.map((pt) => pt.calories_consumed),
     1000,
   );
 
-  const chartHeight = 140;
-  const chartWidth = 320;
-  const barWidth = 24;
-  const spacing = (chartWidth - barWidth * history.length) / (history.length + 1);
+  const chartWidth = 380;
+  const chartHeight = 175;
+  const topPad = 32;
+  const bottomPad = 28;
+  const leftPad = 20;
+  const rightPad = 20;
+  const plotWidth = chartWidth - leftPad - rightPad;
+  const plotHeight = chartHeight - topPad - bottomPad;
+  const baselineY = topPad + plotHeight;
 
-  const targetY = chartHeight - (defaultTarget / maxCal) * chartHeight;
+  const barWidth = 26;
+  const count = history.length || 7;
+  const spacing = (plotWidth - barWidth * count) / (count + 1);
+
+  const targetY = baselineY - (defaultTarget / maxCal) * plotHeight;
 
   return (
     <div className="dashboard-card weekly-trends-card">
@@ -75,37 +84,53 @@ export function WeeklyTrendsChart({ history, loading }: WeeklyTrendsChartProps) 
 
       <div className="svg-chart-container">
         <svg
-          viewBox={`0 0 ${chartWidth} ${chartHeight + 35}`}
+          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           className="weekly-svg-chart"
           aria-label="7-Day calories intake chart"
         >
-          {/* Target guideline */}
+          {/* Target guideline drawn behind bars */}
           <line
-            x1="10"
+            x1={leftPad}
             y1={targetY}
-            x2={chartWidth - 10}
+            x2={chartWidth - rightPad}
             y2={targetY}
             stroke="var(--rust)"
             strokeDasharray="4 3"
             strokeWidth="1.5"
-            strokeOpacity="0.7"
+            strokeOpacity="0.75"
           />
-          <text
-            x={chartWidth - 12}
-            y={Math.max(12, targetY - 4)}
-            textAnchor="end"
-            fontSize="10"
-            fill="var(--rust)"
-            fontWeight="600"
-          >
-            Target ({Math.round(defaultTarget)})
-          </text>
+
+          {/* Target label indicator with clean background pill */}
+          <g transform={`translate(${chartWidth - rightPad - 105}, ${Math.max(8, targetY - 18)})`}>
+            <rect
+              x="0"
+              y="0"
+              width="105"
+              height="15"
+              rx="4"
+              fill="var(--warm-white)"
+              stroke="var(--rust)"
+              strokeWidth="1"
+              strokeOpacity="0.6"
+            />
+            <text
+              x="52.5"
+              y="11"
+              textAnchor="middle"
+              fontSize="8.5"
+              fill="var(--rust)"
+              fontWeight="700"
+              letterSpacing="0.02em"
+            >
+              Target: {Math.round(defaultTarget)} kcal
+            </text>
+          </g>
 
           {/* Day Bars */}
           {history.map((pt, index) => {
-            const x = spacing + index * (barWidth + spacing);
-            const barH = (pt.calories_consumed / maxCal) * chartHeight;
-            const y = chartHeight - barH;
+            const x = leftPad + spacing + index * (barWidth + spacing);
+            const barH = (pt.calories_consumed / maxCal) * plotHeight;
+            const y = baselineY - barH;
             const isHovered = hoveredDay?.date === pt.date;
             const isOverTarget = pt.calories_consumed > pt.calories_target;
 
@@ -122,11 +147,11 @@ export function WeeklyTrendsChart({ history, loading }: WeeklyTrendsChartProps) 
                 {/* Background track */}
                 <rect
                   x={x}
-                  y="10"
+                  y={topPad}
                   width={barWidth}
-                  height={chartHeight - 10}
+                  height={plotHeight}
                   rx="6"
-                  fill="rgba(217, 210, 197, 0.25)"
+                  fill="rgba(217, 210, 197, 0.3)"
                 />
 
                 {/* Filled bar */}
@@ -146,7 +171,7 @@ export function WeeklyTrendsChart({ history, loading }: WeeklyTrendsChartProps) 
                 {/* Day label */}
                 <text
                   x={x + barWidth / 2}
-                  y={chartHeight + 18}
+                  y={baselineY + 18}
                   textAnchor="middle"
                   fontSize="10"
                   fill="var(--earth)"
