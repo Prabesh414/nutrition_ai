@@ -12,8 +12,11 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# A single .env at the repository root configures both the backend and the
+# Vite frontend (see frontend/vite.config.ts `envDir`). There used to be a
+# second backend/.env; load_dotenv never overrides, so the root file always
+# won and edits to the other one silently did nothing.
 load_dotenv(BASE_DIR / ".env")
-load_dotenv(BASE_DIR / "backend" / ".env")
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 IS_PRODUCTION = ENVIRONMENT == "production"
@@ -70,7 +73,7 @@ GEMINI_API_KEYS = _collect_gemini_keys()
 #
 # Verify these ids against Google's current model list; names and free-tier
 # availability change over time.
-DEFAULT_GEMINI_MODELS = "gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash"
+DEFAULT_GEMINI_MODELS = "gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-pro,gemini-2.5-pro"
 
 GEMINI_MODELS = [
     model.strip()

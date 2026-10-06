@@ -38,8 +38,10 @@ npm install && npm run dev
 
 ### Configuration
 
-Everything is read from the environment; copy `.env.example` to `.env` to
-change anything. No credential is committed to this repository.
+Everything is read from **one `.env` at the repository root**, shared by the
+backend and the Vite frontend; copy `.env.example` to `.env` to change
+anything. Vite only exposes `VITE_`-prefixed variables to the browser, so
+secrets in the same file stay server-side. No credential is committed.
 
 | Variable | Default | Notes |
 |---|---|---|
@@ -47,9 +49,10 @@ change anything. No credential is committed to this repository.
 | `JWT_SECRET` | random per process | **Required** when `ENVIRONMENT=production` |
 | `ENVIRONMENT` | `development` | `production` enables strict configuration checks |
 | `CORS_ORIGINS` | `localhost:5173` | Comma-separated allow-list |
-| `GEMINI_API_KEY1`…`4` | unset | Optional; without any the coach uses rule-based replies |
-| `GEMINI_MODELS` | `gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash` | Preference order, strongest first |
+| `GEMINI_API_KEY1`…`8` | unset | Optional; without any the coach uses rule-based replies |
+| `GEMINI_MODELS` | `gemini-2.5-pro,gemini-2.5-flash,gemini-2.0-flash` | Fallback order, strongest first |
 | `GEMINI_TOTAL_BUDGET_SECONDS` | `12` | Ceiling on the whole failover walk |
+| `VITE_API_URL` | `http://localhost:8000/api/v1` | Frontend → backend base URL (browser-visible) |
 
 Generate a secret with:
 
