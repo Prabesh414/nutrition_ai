@@ -212,3 +212,55 @@ def test_a_user_cannot_overwrite_another_users_profile(client, register_user):
 def test_deleting_a_nonexistent_meal_is_a_404(client, authed):
     headers, _ = authed
     assert client.delete(f"{API}/meals/999999", headers=headers).status_code == 404
+
+
+def test_meal_history_spans_requested_days_and_scopes_to_user(client, register_user):
+    alice_headers, _ = register_user("alice_hist@example.com")
+    bob_headers, _ = register_user("bob_hist@example.com")
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    two_days_ago = today - timedelta(days=2)
+
+    # Alice logs meals today and two days ago
+    client.post(f"{API}/meals", headers=alice_headers, json={
+        "name": "Today salad", "calories": 350, "protein": 15, "carbs": 20, "fat": 10, "fiber": 5,
+        "log_date": today.isoformat(),
+    })
+    client.post(f"{API}/meals", headers=alice_headers, json={
+        "name": "Past oats", "calories": 400, "protein": 20, "carbs": 50, "fat": 8, "fiber": 7,
+        "log_date": two_days_ago.isoformat(),
+    })
+
+    # Bob logs a meal on yesterday
+    client.post(f"{API}/meals", headers=bob_headers, json={
+        "name": "Bob pizza", "calories": 800, "log_date": yesterday.isoformat(),
+    })
+
+    res = client.get(f"{API}/meals/history?days=5", headers=alice_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["days"]) == 5
+
+    # Check today
+    today_pt = [d for d in data["days"] if d["date"] == today.isoformat()][0]
+    assert today_pt["calories_consumed"] == 350
+    assert today_pt["protein_g"] == 15
+    assert today_pt["meal_count"] == 1
+
+    # Check yesterday for Alice (should be 0, not Bob's 800)
+    yest_pt = [d for d in data["days"] if d["date"] == yesterday.isoformat()][0]
+    assert yest_pt["calories_consumed"] == 0
+    assert yest_pt["meal_count"] == 0
+
+    # Check two days ago
+    two_pt = [d for d in data["days"] if d["date"] == two_days_ago.isoformat()][0]
+    assert two_pt["calories_consumed"] == 400
+    assert two_pt["meal_count"] == 1
+
+
+def test_meal_history_validates_days_bounds(client, authed):
+    headers, _ = authed
+    assert client.get(f"{API}/meals/history?days=0", headers=headers).status_code == 422
+    assert client.get(f"{API}/meals/history?days=35", headers=headers).status_code == 422
+

@@ -4,7 +4,7 @@ Every query is scoped both to the authenticated user and to a calendar day.
 The previous implementation returned a user's entire history and the dashboard
 summed all of it as "today", so totals were wrong from the second day onwards.
 """
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from backend.database import MealLog, User, get_db
 from backend.nutrition import DEFAULT_FIBER_TARGET_G
 from backend.schemas import (
+    DailyHistoryPoint,
     DailySummaryResponse,
+    HistoryResponse,
     MealLogCreate,
     MealLogResponse,
     NutrientTotals,
@@ -127,3 +129,58 @@ def daily_summary(
         remaining=remaining,
         meals=[MealLogResponse.model_validate(meal) for meal in meals],
     )
+
+
+@router.get("/history", response_model=HistoryResponse)
+def meal_history(
+    days: int = Query(7, ge=1, le=30, description="Number of days including end_date"),
+    end_date: date | None = Query(None, description="Anchor day; defaults to today"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    anchor = end_date or date.today()
+    start = anchor - timedelta(days=days - 1)
+
+    profile = current_user.profile
+    target_cal = profile.target_calories if profile and profile.target_calories else 2000.0
+
+    meals = (
+        db.query(MealLog)
+        .filter(
+            MealLog.user_id == current_user.id,
+            MealLog.log_date >= start,
+            MealLog.log_date <= anchor,
+        )
+        .order_by(MealLog.log_date.asc())
+        .all()
+    )
+
+    by_date: dict[date, list[MealLog]] = {}
+    for meal in meals:
+        by_date.setdefault(meal.log_date, []).append(meal)
+
+    points: list[DailyHistoryPoint] = []
+    curr = start
+    while curr <= anchor:
+        day_meals = by_date.get(curr, [])
+        cal = sum(m.calories for m in day_meals)
+        p = sum(m.protein for m in day_meals)
+        c = sum(m.carbs for m in day_meals)
+        f = sum(m.fat for m in day_meals)
+        fib = sum(m.fiber for m in day_meals)
+        points.append(
+            DailyHistoryPoint(
+                date=curr,
+                calories_consumed=round(cal, 1),
+                calories_target=round(target_cal, 1),
+                protein_g=round(p, 1),
+                carbs_g=round(c, 1),
+                fat_g=round(f, 1),
+                fiber_g=round(fib, 1),
+                meal_count=len(day_meals),
+            )
+        )
+        curr += timedelta(days=1)
+
+    return HistoryResponse(days=points)
+

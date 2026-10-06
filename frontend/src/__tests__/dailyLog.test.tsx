@@ -77,4 +77,20 @@ describe('useDailyLog', () => {
 
     await expect(result.current.removeMeal(99)).rejects.toThrow('Meal not found');
   });
+
+  it('navigates to previous day and requests summary for that date', async () => {
+    const summarySpy = vi.spyOn(api, 'dailySummary').mockResolvedValue(SUMMARY);
+    vi.spyOn(api, 'recommendations').mockResolvedValue(recsWith('Soy Flour'));
+
+    const { result } = renderHook(() => useDailyLog(true));
+    await waitFor(() => expect(result.current.summary).not.toBeNull());
+
+    await act(async () => {
+      result.current.goToPreviousDay();
+    });
+
+    expect(result.current.isToday).toBe(false);
+    expect(summarySpy).toHaveBeenCalledTimes(2);
+  });
 });
+

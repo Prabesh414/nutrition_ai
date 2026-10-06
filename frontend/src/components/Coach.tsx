@@ -3,7 +3,56 @@ import { useEffect, useRef, useState } from 'react';
 import type { Coach as CoachState } from '../hooks/useCoach';
 import { useDraggable } from '../hooks/useDraggable';
 
-function MessageList({ messages, pending }: { messages: CoachState['messages']; pending: boolean }) {
+const QUICK_PROMPTS = [
+  '📊 How are my calories & macros today?',
+  '🍗 Suggest a high-protein dinner',
+  '🌾 How can I get more dietary fiber?',
+  '💧 Tips to stay hydrated & energized',
+];
+
+function FormattedText({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <div className="formatted-chat-text">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={idx} className="chat-line-break" />;
+
+        const isBullet = trimmed.startsWith('* ') || trimmed.startsWith('- ');
+        const cleanLine = isBullet ? trimmed.slice(2) : trimmed;
+
+        const parts = cleanLine.split(/(\*\*[^*]+\*\*)/g);
+        const rendered = parts.map((part, pIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={pIdx}>{part.slice(2, -2)}</strong>;
+          }
+          return part;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={idx} className="chat-bullet-line">
+              <span className="bullet-dot">•</span>
+              <span>{rendered}</span>
+            </div>
+          );
+        }
+
+        return <p key={idx} className="chat-paragraph">{rendered}</p>;
+      })}
+    </div>
+  );
+}
+
+function MessageList({
+  messages,
+  pending,
+  onQuickPrompt,
+}: {
+  messages: CoachState['messages'];
+  pending: boolean;
+  onQuickPrompt?: (prompt: string) => void;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,10 +66,31 @@ function MessageList({ messages, pending }: { messages: CoachState['messages']; 
           key={index}
           className={`chat-bubble ${message.sender === 'user' ? 'user-bubble' : 'coach-bubble'}`}
         >
-          {message.text}
+          {message.sender === 'user' ? message.text : <FormattedText text={message.text} />}
         </div>
       ))}
       {pending && <div className="chat-bubble coach-bubble chat-typing">Thinking…</div>}
+
+      {/* Show prompt chips if conversation is new */}
+      {messages.length <= 1 && onQuickPrompt && (
+        <div className="quick-prompts-container">
+          <p className="quick-prompts-title">Suggested questions:</p>
+          <div className="quick-prompts-grid">
+            {QUICK_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                className="quick-prompt-chip"
+                onClick={() => onQuickPrompt(prompt.replace(/^[^\s]+\s/, ''))}
+                disabled={pending}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div ref={endRef} />
     </>
   );
@@ -67,12 +137,19 @@ function ChatForm({
 }
 
 export function CoachPanel({ coach }: { coach: CoachState }) {
+  const handlePrompt = (prompt: string) => {
+    void coach.send(prompt);
+  };
+
   return (
     <div className="coach-tab-container">
       <div className="dashboard-card chatbot-card">
-        <h3>AI Nutrition Assistant</h3>
+        <div className="card-header-with-badge">
+          <h3>AI Nutrition Assistant</h3>
+          <span className="coach-mode-badge">Gemini-Powered</span>
+        </div>
         <div className="chatbot-chatbox">
-          <MessageList messages={coach.messages} pending={coach.pending} />
+          <MessageList messages={coach.messages} pending={coach.pending} onQuickPrompt={handlePrompt} />
         </div>
         <ChatForm
           coach={coach}
@@ -90,10 +167,14 @@ export function FloatingCoach({ coach }: { coach: CoachState }) {
   const [open, setOpen] = useState(false);
   const { position, dragging, onPointerDown } = useDraggable(() => setOpen((value) => !value));
 
+  const handlePrompt = (prompt: string) => {
+    void coach.send(prompt);
+  };
+
   const popupStyle: React.CSSProperties = {
     position: 'absolute',
-    width: '340px',
-    height: '450px',
+    width: '360px',
+    height: '490px',
     pointerEvents: 'auto',
     display: 'flex',
     flexDirection: 'column',
@@ -144,7 +225,7 @@ export function FloatingCoach({ coach }: { coach: CoachState }) {
             </button>
           </div>
           <div className="floating-chat-messages">
-            <MessageList messages={coach.messages} pending={coach.pending} />
+            <MessageList messages={coach.messages} pending={coach.pending} onQuickPrompt={handlePrompt} />
           </div>
           <ChatForm
             coach={coach}

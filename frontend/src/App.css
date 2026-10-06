@@ -1646,3 +1646,679 @@
   opacity: 0.7;
   text-align: center;
 }
+
+/* =========================================================
+   Date Navigator & Historical Browsing
+   ========================================================= */
+
+.dashboard-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.date-navigator-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 14px;
+  padding: 0.85rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(45, 33, 24, 0.04);
+}
+
+.date-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.btn-date-nav {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--stone);
+  background: var(--cream);
+  color: var(--bark);
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn-date-nav:hover:not(:disabled) {
+  background: var(--bark);
+  color: #fff;
+  border-color: var(--bark);
+  transform: scale(1.05);
+}
+
+.btn-date-nav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.date-display-wrap {
+  position: relative;
+}
+
+.date-label-clickable {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.date-label-clickable:hover {
+  background: rgba(115, 87, 62, 0.06);
+}
+
+.date-tag-badge {
+  background: var(--sand);
+  color: var(--bark);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--stone);
+  letter-spacing: 0.02rem;
+}
+
+.date-full-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--bark);
+}
+
+.calendar-icon {
+  color: var(--earth);
+  opacity: 0.8;
+}
+
+.date-picker-hidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.date-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.btn-jump-today {
+  border: 1px solid var(--rust);
+  background: transparent;
+  color: var(--rust);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-jump-today:hover {
+  background: var(--rust);
+  color: #fff;
+}
+
+.date-status-indicator {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+}
+
+.status-live {
+  background: rgba(82, 121, 111, 0.12);
+  color: #386641;
+}
+
+.status-past {
+  background: rgba(184, 80, 54, 0.1);
+  color: var(--rust);
+}
+
+/* =========================================================
+   Weekly Trends Chart & SVG Visualization
+   ========================================================= */
+
+.weekly-trends-card {
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  border-radius: 16px;
+  padding: 1.35rem;
+  box-shadow: 0 4px 16px rgba(45, 33, 24, 0.05);
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.trend-stat-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(184, 80, 54, 0.08);
+  color: var(--rust);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.trends-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: var(--cream);
+  border-radius: 10px;
+  border: 1px solid rgba(217, 210, 197, 0.6);
+}
+
+.trend-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.trend-stat-lbl {
+  font-size: 0.72rem;
+  color: var(--earth);
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  font-weight: 600;
+}
+
+.trend-stat-val {
+  font-size: 1.05rem;
+  color: var(--bark);
+  font-family: var(--font-display);
+}
+
+.svg-chart-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.weekly-svg-chart {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  overflow: visible;
+}
+
+.chart-bar-group {
+  cursor: pointer;
+  outline: none;
+}
+
+.svg-bar-rect {
+  transition: all 0.25s ease;
+}
+
+.bar-normal {
+  fill: var(--rust);
+}
+
+.bar-over-target {
+  fill: #d90429;
+}
+
+.bar-hovered {
+  fill: #8f2d14;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+}
+
+.chart-tooltip-bubble {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bark);
+  color: #fff;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  pointer-events: none;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 150px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tooltip-macros {
+  display: flex;
+  gap: 0.5rem;
+  color: var(--stone);
+  font-size: 0.7rem;
+}
+
+.tooltip-count {
+  font-size: 0.68rem;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.trends-toggle-wrap {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-toggle-trends {
+  background: transparent;
+  border: 1px dashed var(--stone);
+  color: var(--earth);
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle-trends:hover {
+  background: var(--cream);
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+/* =========================================================
+   Macro Progress & 4-Column Grid (Fiber included)
+   ========================================================= */
+
+.macros-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 0.65rem !important;
+}
+
+.fib-fill {
+  background: linear-gradient(180deg, #52796F, #2F3E46) !important;
+}
+
+.macro-percent {
+  font-size: 0.68rem;
+  color: var(--earth);
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
+.status-ok {
+  background: rgba(82, 121, 111, 0.1);
+  color: #386641;
+}
+
+.status-over {
+  background: rgba(217, 4, 41, 0.1);
+  color: #d90429;
+}
+
+/* =========================================================
+   Cuisine Filters & Explainable AI (XAI)
+   ========================================================= */
+
+.cuisine-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.85rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cuisine-filter-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--earth);
+  text-transform: uppercase;
+}
+
+.cuisine-chips-wrap {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.cuisine-chip {
+  background: var(--cream);
+  border: 1px solid var(--stone);
+  color: var(--bark);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cuisine-chip:hover {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.cuisine-chip.active {
+  background: var(--bark);
+  color: #fff;
+  border-color: var(--bark);
+}
+
+.rec-slot-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.4rem 0 1rem;
+  font-size: 0.75rem;
+  color: var(--earth);
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.rec-slot-btn {
+  background: transparent;
+  border: 1px solid var(--stone);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--bark);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rec-slot-btn:hover {
+  border-color: var(--rust);
+}
+
+.rec-slot-btn.active {
+  background: var(--rust);
+  color: #fff;
+  border-color: var(--rust);
+}
+
+.rec-xai-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0.55rem;
+}
+
+.xai-chip {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+}
+
+.match-chip {
+  background: rgba(184, 80, 54, 0.1);
+  color: var(--rust);
+  font-weight: 700;
+}
+
+.protein-chip {
+  background: rgba(224, 122, 95, 0.14);
+  color: #b04e28;
+}
+
+.fiber-chip {
+  background: rgba(82, 121, 111, 0.14);
+  color: #2f6055;
+}
+
+.vegan-chip {
+  background: rgba(46, 117, 89, 0.12);
+  color: #1b6348;
+}
+
+.veg-chip {
+  background: rgba(212, 163, 115, 0.2);
+  color: #8c5319;
+}
+
+.fib-pill {
+  background: rgba(82, 121, 111, 0.12);
+  color: #2f6055;
+}
+
+/* =========================================================
+   Coach Quick Prompts & Formatted Messages
+   ========================================================= */
+
+.coach-mode-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(184,80,54,0.15), rgba(82,121,111,0.15));
+  color: var(--bark);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--stone);
+}
+
+.quick-prompts-container {
+  margin: 0.85rem 0;
+  padding: 0.75rem;
+  background: var(--cream);
+  border-radius: 12px;
+  border: 1px dashed var(--stone);
+}
+
+.quick-prompts-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--earth);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.quick-prompts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.quick-prompt-chip {
+  text-align: left;
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  color: var(--bark);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-prompt-chip:hover:not(:disabled) {
+  border-color: var(--rust);
+  color: var(--rust);
+  transform: translateX(2px);
+  background: #fff;
+}
+
+.quick-prompt-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formatted-chat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.chat-paragraph {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.chat-bullet-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  line-height: 1.45;
+}
+
+.bullet-dot {
+  color: var(--rust);
+  font-weight: bold;
+}
+
+.chat-line-break {
+  height: 0.35rem;
+}
+
+/* =========================================================
+   Food Search Filters & Table Badges
+   ========================================================= */
+
+.search-filters-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1.15rem;
+  background: var(--cream);
+  border-radius: 12px;
+  border: 1px solid var(--stone);
+  flex-wrap: wrap;
+}
+
+.search-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.search-filter-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--earth);
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+}
+
+.search-filter-chips {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.search-filter-chip {
+  background: var(--warm-white);
+  border: 1px solid var(--stone);
+  color: var(--bark);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-filter-chip:hover {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.search-filter-chip.active {
+  background: var(--bark);
+  color: #fff;
+  border-color: var(--bark);
+}
+
+.cuisine-badge {
+  display: inline-block;
+  background: var(--sand);
+  color: var(--bark);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--stone);
+}
+
+.category-vegan {
+  background: rgba(46, 117, 89, 0.12) !important;
+  color: #1b6348 !important;
+  border: 1px solid rgba(46, 117, 89, 0.25) !important;
+  font-weight: 600;
+}
+
+.category-vegetarian {
+  background: rgba(212, 163, 115, 0.2) !important;
+  color: #8c5319 !important;
+  border: 1px solid rgba(212, 163, 115, 0.35) !important;
+  font-weight: 600;
+}
+
+.category-non-veg {
+  background: rgba(184, 80, 54, 0.12) !important;
+  color: var(--rust) !important;
+  border: 1px solid rgba(184, 80, 54, 0.25) !important;
+  font-weight: 600;
+}
+
+.search-error-banner {
+  background: #fdf2f2;
+  border: 1px solid #f8b4b4;
+  color: #9b1c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-filter-reset {
+  display: inline-block;
+  margin-left: 0.75rem;
+  background: var(--rust);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-filter-reset:hover {
+  opacity: 0.88;
+}
+
+
+

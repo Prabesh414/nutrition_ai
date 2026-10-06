@@ -136,6 +136,22 @@ class DailySummaryResponse(BaseModel):
     meals: list[MealLogResponse]
 
 
+class DailyHistoryPoint(BaseModel):
+    date: date
+    calories_consumed: float
+    calories_target: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    fiber_g: float
+    meal_count: int
+
+
+class HistoryResponse(BaseModel):
+    days: list[DailyHistoryPoint]
+
+
+
 class UserResponse(BaseModel):
     id: int
     username: Optional[str] = None

@@ -10,6 +10,7 @@ import type {
   ApiChatResponse,
   ApiDailySummary,
   ApiFood,
+  ApiHistoryResponse,
   ApiMeal,
   ApiProfile,
   ApiRecommendationsResponse,
@@ -165,12 +166,32 @@ export const api = {
     return request<void>(`/meals/${mealId}`, { method: 'DELETE' });
   },
 
-  searchFoods(query: string, signal?: AbortSignal): Promise<ApiFood[]> {
-    return request<ApiFood[]>(`/foods?query=${encodeURIComponent(query)}`, { auth: false, signal });
+  searchFoods(
+    query: string,
+    optionsOrSignal?: { region?: string; category?: string; signal?: AbortSignal } | AbortSignal,
+  ): Promise<ApiFood[]> {
+    const signal = optionsOrSignal instanceof AbortSignal ? optionsOrSignal : optionsOrSignal?.signal;
+    const region = !(optionsOrSignal instanceof AbortSignal) ? optionsOrSignal?.region : undefined;
+    const category = !(optionsOrSignal instanceof AbortSignal) ? optionsOrSignal?.category : undefined;
+
+    const params = new URLSearchParams({ query });
+    if (region && region !== 'All') params.set('region', region);
+    if (category && category !== 'All') params.set('category', category);
+
+    return request<ApiFood[]>(`/foods?${params.toString()}`, { auth: false, signal });
   },
 
-  recommendations(signal?: AbortSignal): Promise<ApiRecommendationsResponse> {
-    return request<ApiRecommendationsResponse>('/recommendations', { signal });
+  recommendations(arg?: string | AbortSignal, maybeSignal?: AbortSignal): Promise<ApiRecommendationsResponse> {
+    const logDate = typeof arg === 'string' ? arg : undefined;
+    const signal = arg instanceof AbortSignal ? arg : maybeSignal;
+    const query = logDate ? `?log_date=${encodeURIComponent(logDate)}` : '';
+    return request<ApiRecommendationsResponse>(`/recommendations${query}`, { signal });
+  },
+
+  mealHistory(days: number = 7, endDate?: string): Promise<ApiHistoryResponse> {
+    const params = new URLSearchParams({ days: String(days) });
+    if (endDate) params.set('end_date', endDate);
+    return request<ApiHistoryResponse>(`/meals/history?${params.toString()}`);
   },
 
   chat(message: string): Promise<ApiChatResponse> {

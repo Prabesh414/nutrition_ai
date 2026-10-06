@@ -1,15 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api } from '../api/client';
-import type { ApiDailySummary, ApiFood, ApiProfile, ApiRecommendation, MealType } from '../api/types';
+import type {
+  ApiDailySummary,
+  ApiFood,
+  ApiHistoryPoint,
+  ApiProfile,
+  ApiRecommendation,
+  MealType,
+} from '../api/types';
 import { MEAL_TYPES } from '../api/types';
+import { DateNavigator } from './DateNavigator';
+import { WeeklyTrendsChart } from './WeeklyTrendsChart';
 
 interface DashboardProps {
   profile: ApiProfile | null;
   summary: ApiDailySummary | null;
   recommendations: ApiRecommendation[];
   loadingRecommendations: boolean;
+  history: ApiHistoryPoint[];
+  loadingHistory: boolean;
+  selectedDate: string;
+  isToday: boolean;
   error: string | null;
+  onPrevDay: () => void;
+  onNextDay: () => void;
+  onToday: () => void;
+  onSelectDate: (date: string) => void;
   onLogMeal: (food: ApiFood, quantity: number, mealType: MealType) => Promise<void>;
   onRemoveMeal: (mealId: number) => Promise<void>;
 }
@@ -32,27 +49,41 @@ function suggestedMealType(now: Date = new Date()): MealType {
   return 'Snack';
 }
 
-function MacroBar({ label, consumed, target, className }: {
+function MacroBar({
+  label,
+  consumed,
+  target,
+  className,
+}: {
   label: string;
   consumed: number;
   target: number;
   className: string;
 }) {
+  const pct = percent(consumed, target);
   return (
     <div className="macro-progress-box">
       <div className="macro-lbl">{label}</div>
       <div className="macro-bar-bg">
-        <div
-          className={`macro-bar-fill ${className}`}
-          style={{ height: `${percent(consumed, target)}%` }}
-        />
+        <div className={`macro-bar-fill ${className}`} style={{ height: `${pct}%` }} />
       </div>
-      <span className="macro-text">{round(consumed)}g / {round(target)}g</span>
+      <span className="macro-text">
+        {round(consumed)}g / {round(target)}g
+      </span>
+      <span className="macro-percent">{round(pct)}%</span>
     </div>
   );
 }
 
-function LogMealCard({ onLogMeal }: Pick<DashboardProps, 'onLogMeal'>) {
+function LogMealCard({
+  onLogMeal,
+  selectedDate,
+  isToday,
+}: {
+  onLogMeal: DashboardProps['onLogMeal'];
+  selectedDate: string;
+  isToday: boolean;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ApiFood[]>([]);
   const [selected, setSelected] = useState<ApiFood | null>(null);
@@ -102,15 +133,24 @@ function LogMealCard({ onLogMeal }: Pick<DashboardProps, 'onLogMeal'>) {
 
   return (
     <div className="dashboard-card log-meal-card">
-      <h3>Track a Meal</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-field-container">
-          <label htmlFor="food-search">Search Food</label>
+      <div className="card-header-with-badge">
+        <h3>Log a Meal</h3>
+        <span className="pref-badge">
+          {isToday ? 'Today' : selectedDate}
+        </span>
+      </div>
+      {message && <p className="form-error">{message}</p>}
+
+      <form onSubmit={handleSubmit} className="log-meal-form">
+        <div className="search-food-region">
+          <label htmlFor="food-search-input" className="field-label">
+            Search food
+          </label>
           <input
-            id="food-search"
+            id="food-search-input"
             type="text"
-            className="form-input"
-            placeholder="Type to search (e.g. Eggs, Oatmeal...)"
+            className="text-input"
+            placeholder="e.g. Oatmeal, Dal Bhat, Apple…"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -118,73 +158,104 @@ function LogMealCard({ onLogMeal }: Pick<DashboardProps, 'onLogMeal'>) {
             }}
             autoComplete="off"
           />
-          {results.length > 0 && (
-            <div className="search-dropdown">
+
+          {results.length > 0 && !selected && (
+            <ul className="search-dropdown-list">
               {results.slice(0, 8).map((food) => (
-                <button
-                  key={food.id}
-                  type="button"
-                  className="dropdown-item"
-                  onClick={() => {
-                    setSelected(food);
-                    setQuery(food.name);
-                    setResults([]);
-                  }}
-                >
-                  <span>{food.name}</span>
-                  <span className="dropdown-item-meta">({round(food.calories)} kcal)</span>
-                </button>
+                <li key={food.id}>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setSelected(food);
+                      setQuery(food.name);
+                      setResults([]);
+                    }}
+                  >
+                    <span className="dropdown-food-name">{food.name}</span>
+                    <span className="dropdown-food-meta">
+                      {round(food.calories)} kcal • P: {food.protein}g C: {food.carbohydrates}g
+                    </span>
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
 
         {selected && (
-          <div className="selected-food-details">
-            Selected: <strong>{selected.name}</strong> — {round(selected.calories)} kcal per{' '}
-            {selected.serving_size}
+          <div className="selected-food-preview">
+            <div>
+              <strong>{selected.name}</strong>
+              <div className="food-per-serving-hint">
+                {round(selected.calories * quantity)} kcal (
+                {round(selected.protein * quantity)}g P,{' '}
+                {round(selected.carbohydrates * quantity)}g C,{' '}
+                {round(selected.fat * quantity)}g F)
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-clear-selection"
+              onClick={() => {
+                setSelected(null);
+                setQuery('');
+              }}
+            >
+              Clear
+            </button>
           </div>
         )}
 
-        <div className="log-row">
-          <div className="form-field-container">
-            <label htmlFor="meal-qty">Servings / Quantity</label>
-            <input
-              id="meal-qty"
-              type="number"
-              min="0.25"
-              step="0.25"
-              className="form-input"
-              value={quantity}
-              onChange={(event) => setQuantity(parseFloat(event.target.value) || 1)}
-            />
-          </div>
-          <div className="form-field-container">
-            <label htmlFor="meal-type">Meal Type</label>
+        <div className="log-meal-row">
+          <div className="field-group">
+            <label htmlFor="meal-type-select" className="field-label">
+              Meal type
+            </label>
             <select
-              id="meal-type"
-              className="form-input"
+              id="meal-type-select"
+              className="select-input"
               value={mealType}
               onChange={(event) => setMealType(event.target.value as MealType)}
             >
-              {MEAL_TYPES.map((type) => <option key={type}>{type}</option>)}
+              {MEAL_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
             </select>
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="meal-servings-input" className="field-label">
+              Servings
+            </label>
+            <input
+              id="meal-servings-input"
+              type="number"
+              min="0.25"
+              max="20"
+              step="0.25"
+              className="text-input text-input-short"
+              value={quantity}
+              onChange={(event) => setQuantity(Math.max(0.25, Number(event.target.value) || 1))}
+            />
           </div>
         </div>
 
-        {message && <p className="form-error">{message}</p>}
-
         <button
           type="submit"
-          className="btn-flat-primary log-meal-submit"
+          className="btn-flat-primary btn-submit-meal"
           disabled={!selected || saving}
         >
-          {saving ? 'Logging…' : 'Log Meal'}
+          {saving ? 'Logging…' : `Log Meal for ${isToday ? 'Today' : selectedDate}`}
         </button>
       </form>
     </div>
   );
 }
+
+const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'] as const;
 
 function RecommendationsCard({
   profile,
@@ -193,7 +264,13 @@ function RecommendationsCard({
   onLogMeal,
 }: Pick<DashboardProps, 'profile' | 'recommendations' | 'loadingRecommendations' | 'onLogMeal'>) {
   const [logging, setLogging] = useState<number | null>(null);
-  const defaultMealType = useRef<MealType>(suggestedMealType());
+  const [cuisineFilter, setCuisineFilter] = useState<string>('All');
+  const [selectedSlot, setSelectedSlot] = useState<MealType>(() => suggestedMealType());
+
+  const filteredRecs = recommendations.filter((food) => {
+    if (cuisineFilter === 'All') return true;
+    return food.region.toLowerCase() === cuisineFilter.toLowerCase();
+  });
 
   return (
     <div className="dashboard-card recommendations-card">
@@ -203,59 +280,113 @@ function RecommendationsCard({
           {profile?.dietary_preference ?? 'None'} • {profile?.fitness_goal ?? 'Maintain Weight'}
         </span>
       </div>
+
       <p className="recommendations-intro">
-        Foods closest to the nutrients you still have left today. Click <strong>+ Log</strong> to
-        add one as your {defaultMealType.current.toLowerCase()}.
+        Retrieved using <strong>k-NN</strong> Euclidean proximity to your remaining targets and
+        re-ranked by nutrient density quality.
       </p>
+
+      {/* Cuisine filter chips */}
+      <div className="cuisine-filter-bar">
+        <span className="cuisine-filter-label">Cuisine:</span>
+        <div className="cuisine-chips-wrap">
+          {CUISINE_OPTIONS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`cuisine-chip ${cuisineFilter === c ? 'active' : ''}`}
+              onClick={() => setCuisineFilter(c)}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Slot selector for quick logging */}
+      <div className="rec-slot-selector">
+        <span>Log as:</span>
+        {MEAL_TYPES.map((type) => (
+          <button
+            key={type}
+            type="button"
+            className={`rec-slot-btn ${selectedSlot === type ? 'active' : ''}`}
+            onClick={() => setSelectedSlot(type)}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
 
       <div className="recommended-meals-list">
         {loadingRecommendations && (
           <p className="empty-logs-text">Loading personalized recommendations…</p>
         )}
 
-        {!loadingRecommendations && recommendations.length === 0 && (
+        {!loadingRecommendations && filteredRecs.length === 0 && (
           <p className="empty-logs-text">
-            No recommendations available. Set up your health profile to get started.
+            No recommendations matching {cuisineFilter !== 'All' ? `the ${cuisineFilter} filter` : 'your profile'}.
           </p>
         )}
 
-        {!loadingRecommendations && recommendations.map((food) => (
-          <div key={food.id} className="recommended-meal-item">
-            <div className="rec-item-header">
-              <div className="rec-title-wrap">
-                <span className="rec-meal-badge">{food.region}</span>
-                <strong className="rec-name">{food.name}</strong>
-                <span className="rec-portion">Portion: {food.serving_size}</span>
+        {!loadingRecommendations &&
+          filteredRecs.map((food) => (
+            <div key={food.id} className="recommended-meal-item">
+              <div className="rec-item-header">
+                <div className="rec-title-wrap">
+                  <span className="rec-meal-badge">{food.region}</span>
+                  <strong className="rec-name">{food.name}</strong>
+                  <span className="rec-portion">Portion: {food.serving_size}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-log-recommendation"
+                  disabled={logging === food.id}
+                  onClick={async () => {
+                    setLogging(food.id);
+                    try {
+                      await onLogMeal(food, 1, selectedSlot);
+                    } finally {
+                      setLogging(null);
+                    }
+                  }}
+                  title={`Log ${food.name} as ${selectedSlot}`}
+                >
+                  {logging === food.id ? '…' : `+ Log (${selectedSlot})`}
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn-log-recommendation"
-                disabled={logging === food.id}
-                onClick={async () => {
-                  setLogging(food.id);
-                  try {
-                    await onLogMeal(food, 1, defaultMealType.current);
-                  } finally {
-                    setLogging(null);
-                  }
-                }}
-                title={`Log ${food.name}`}
-              >
-                {logging === food.id ? '…' : '+ Log'}
-              </button>
+
+              {/* Explainable AI breakdown badges */}
+              <div className="rec-xai-row">
+                <span className="xai-chip match-chip">
+                  🎯 {Math.round(food.similarity_score * 100)}% match
+                </span>
+                {food.protein >= 15 && (
+                  <span className="xai-chip protein-chip">
+                    ⚡ High Protein (+{round(food.protein)}g)
+                  </span>
+                )}
+                {food.fiber >= 3 && (
+                  <span className="xai-chip fiber-chip">
+                    🌾 Fiber Rich (+{round(food.fiber)}g)
+                  </span>
+                )}
+                {food.is_vegan ? (
+                  <span className="xai-chip vegan-chip">🌿 Vegan</span>
+                ) : food.is_vegetarian ? (
+                  <span className="xai-chip veg-chip">🥛 Vegetarian</span>
+                ) : null}
+              </div>
+
+              <div className="rec-macros-row">
+                <span className="rec-macro-pill cal-pill">{round(food.calories)} kcal</span>
+                <span className="rec-macro-pill prot-pill">P: {food.protein}g</span>
+                <span className="rec-macro-pill carb-pill">C: {food.carbohydrates}g</span>
+                <span className="rec-macro-pill fat-pill">F: {food.fat}g</span>
+                <span className="rec-macro-pill fib-pill">Fib: {food.fiber}g</span>
+              </div>
             </div>
-            <p className="rec-benefits">
-              {Math.round(food.similarity_score * 100)}% match to your remaining targets
-              {food.protein > 15 ? ' · rich in protein' : food.fiber > 3 ? ' · high in fibre' : ''}
-            </p>
-            <div className="rec-macros-row">
-              <span className="rec-macro-pill cal-pill">{round(food.calories)} kcal</span>
-              <span className="rec-macro-pill prot-pill">P: {food.protein}g</span>
-              <span className="rec-macro-pill carb-pill">C: {food.carbohydrates}g</span>
-              <span className="rec-macro-pill fat-pill">F: {food.fat}g</span>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
@@ -266,104 +397,194 @@ export function Dashboard({
   summary,
   recommendations,
   loadingRecommendations,
+  history,
+  loadingHistory,
+  selectedDate,
+  isToday,
   error,
+  onPrevDay,
+  onNextDay,
+  onToday,
+  onSelectDate,
   onLogMeal,
   onRemoveMeal,
 }: DashboardProps) {
+  const [showTrends, setShowTrends] = useState(false);
+
   const consumed = summary?.consumed ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
   const targets = summary?.targets ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
   const meals = summary?.meals ?? [];
 
-  return (
-    <div className="dashboard-grid">
-      <div className="dashboard-left">
-        <div className="dashboard-card profile-metrics-card">
-          <h3>Your Health Profile</h3>
-          <div className="profile-stats">
-            <div className="stat-box">
-              <span className="stat-lbl">BMI</span>
-              <span className="stat-val">{profile?.bmi ?? '—'}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-lbl">BMR</span>
-              <span className="stat-val">{profile?.bmr ?? '—'} kcal</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-lbl">Daily Budget</span>
-              <span className="stat-val">{profile?.target_calories ?? '—'} kcal</span>
-            </div>
-          </div>
-          <div className="profile-details-list">
-            <p><strong>Goal:</strong> {profile?.fitness_goal ?? 'Not set'}</p>
-            <p><strong>Preference:</strong> {profile?.dietary_preference ?? 'Not set'}</p>
-            <p><strong>Activity Level:</strong> {profile?.activity_level ?? 'Not set'}</p>
-          </div>
-        </div>
+  const calDiff = targets.calories - consumed.calories;
 
-        <div className="dashboard-card progress-card">
-          <h3>Today&apos;s Consumption Progress</h3>
-          {error && <p className="form-error">{error}</p>}
-          <div className="metric-progress-wrapper">
-            <div className="metric-header">
-              <span>Calories</span>
-              <span>{round(consumed.calories)} / {round(targets.calories)} kcal</span>
+  return (
+    <div className="dashboard-content-wrapper">
+      {/* Date Navigation Bar */}
+      <DateNavigator
+        selectedDate={selectedDate}
+        isToday={isToday}
+        onPrevDay={onPrevDay}
+        onNextDay={onNextDay}
+        onToday={onToday}
+        onSelectDate={onSelectDate}
+      />
+
+      <div className="dashboard-grid">
+        <div className="dashboard-left">
+          {/* Health Profile Card */}
+          <div className="dashboard-card profile-metrics-card">
+            <h3>Your Health Profile</h3>
+            <div className="profile-stats">
+              <div className="stat-box">
+                <span className="stat-lbl">BMI</span>
+                <span className="stat-val">{profile?.bmi ?? '—'}</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-lbl">BMR</span>
+                <span className="stat-val">{profile?.bmr ?? '—'} kcal</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-lbl">Daily Budget</span>
+                <span className="stat-val">{profile?.target_calories ?? '—'} kcal</span>
+              </div>
             </div>
-            <div className="progress-bar-bg">
-              <div
-                className="progress-bar-fill cal-fill"
-                style={{ width: `${percent(consumed.calories, targets.calories)}%` }}
+            <div className="profile-details-list">
+              <p>
+                <strong>Goal:</strong> {profile?.fitness_goal ?? 'Not set'}
+              </p>
+              <p>
+                <strong>Preference:</strong> {profile?.dietary_preference ?? 'Not set'}
+              </p>
+              <p>
+                <strong>Activity Level:</strong> {profile?.activity_level ?? 'Not set'}
+              </p>
+            </div>
+          </div>
+
+          {/* Daily Consumption Progress Card */}
+          <div className="dashboard-card progress-card">
+            <div className="card-header-with-badge">
+              <h3>{isToday ? "Today's" : `${selectedDate}`} Progress</h3>
+              <span className={`status-pill ${calDiff >= 0 ? 'status-ok' : 'status-over'}`}>
+                {calDiff >= 0
+                  ? `${round(calDiff)} kcal remaining`
+                  : `${round(Math.abs(calDiff))} kcal over target`}
+              </span>
+            </div>
+
+            {error && <p className="form-error">{error}</p>}
+
+            <div className="metric-progress-wrapper">
+              <div className="metric-header">
+                <span>Calories</span>
+                <span>
+                  {round(consumed.calories)} / {round(targets.calories)} kcal
+                </span>
+              </div>
+              <div className="progress-bar-bg">
+                <div
+                  className="progress-bar-fill cal-fill"
+                  style={{ width: `${percent(consumed.calories, targets.calories)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="macros-progress-grid macros-4col">
+              <MacroBar
+                label="Protein"
+                consumed={consumed.protein}
+                target={targets.protein}
+                className="prot-fill"
+              />
+              <MacroBar
+                label="Carbs"
+                consumed={consumed.carbs}
+                target={targets.carbs}
+                className="carb-fill"
+              />
+              <MacroBar
+                label="Fat"
+                consumed={consumed.fat}
+                target={targets.fat}
+                className="fat-fill"
+              />
+              <MacroBar
+                label="Fiber"
+                consumed={consumed.fiber}
+                target={targets.fiber}
+                className="fib-fill"
               />
             </div>
+
+            <div className="trends-toggle-wrap">
+              <button
+                type="button"
+                className="btn-toggle-trends"
+                onClick={() => setShowTrends((val) => !val)}
+              >
+                {showTrends ? 'Hide 7-Day Analytics ▲' : 'Show 7-Day Nutrition Analytics ▼'}
+              </button>
+            </div>
           </div>
 
-          <div className="macros-progress-grid">
-            <MacroBar label="Protein" consumed={consumed.protein} target={targets.protein} className="prot-fill" />
-            <MacroBar label="Carbs" consumed={consumed.carbs} target={targets.carbs} className="carb-fill" />
-            <MacroBar label="Fat" consumed={consumed.fat} target={targets.fat} className="fat-fill" />
-          </div>
+          {/* Expandable 7-Day Trends Chart */}
+          {showTrends && <WeeklyTrendsChart history={history} loading={loadingHistory} />}
+
+          {/* Log Meal Card */}
+          <LogMealCard
+            onLogMeal={onLogMeal}
+            selectedDate={selectedDate}
+            isToday={isToday}
+          />
         </div>
 
-        <LogMealCard onLogMeal={onLogMeal} />
-      </div>
+        <div className="dashboard-right">
+          {/* Recommendations Card */}
+          <RecommendationsCard
+            profile={profile}
+            recommendations={recommendations}
+            loadingRecommendations={loadingRecommendations}
+            onLogMeal={onLogMeal}
+          />
 
-      <div className="dashboard-right">
-        <RecommendationsCard
-          profile={profile}
-          recommendations={recommendations}
-          loadingRecommendations={loadingRecommendations}
-          onLogMeal={onLogMeal}
-        />
-
-        <div className="dashboard-card meal-history-card">
-          <h3>Today&apos;s Meal Log</h3>
-          {meals.length > 0 ? (
-            <div className="logged-meals-list">
-              {meals.map((meal) => (
-                <div key={meal.id} className="logged-meal-item">
-                  <div className="meal-details">
-                    <span className="meal-title-name">{meal.name}</span>
-                    <span className="meal-meta">
-                      {meal.meal_type} • {meal.quantity} serving(s)
-                    </span>
-                  </div>
-                  <div className="meal-macros-summary">
-                    <span>{round(meal.calories)} kcal</span>
-                    <button
-                      className="btn-remove-meal"
-                      onClick={() => void onRemoveMeal(meal.id)}
-                      aria-label={`Remove ${meal.name}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
+          {/* Meal Log List */}
+          <div className="dashboard-card meal-history-card">
+            <div className="card-header-with-badge">
+              <h3>{isToday ? "Today's" : `${selectedDate}`} Meal Log</h3>
+              <span className="meal-count-badge">{meals.length} meal(s)</span>
             </div>
-          ) : (
-            <p className="empty-logs-text">
-              No meals logged today yet. Use the form to start tracking.
-            </p>
-          )}
+
+            {meals.length > 0 ? (
+              <div className="logged-meals-list">
+                {meals.map((meal) => (
+                  <div key={meal.id} className="logged-meal-item">
+                    <div className="meal-details">
+                      <span className="meal-title-name">{meal.name}</span>
+                      <span className="meal-meta">
+                        {meal.meal_type} • {meal.quantity} serving(s)
+                      </span>
+                    </div>
+                    <div className="meal-macros-summary">
+                      <span className="meal-macro-pill cal-pill">{round(meal.calories)} kcal</span>
+                      <button
+                        className="btn-remove-meal"
+                        onClick={() => void onRemoveMeal(meal.id)}
+                        aria-label={`Remove ${meal.name}`}
+                        title="Remove meal"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-logs-text">
+                No meals logged for {isToday ? 'today' : selectedDate} yet. Use the form above to
+                track a meal.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

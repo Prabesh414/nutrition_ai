@@ -118,6 +118,22 @@ export interface ApiChatResponse {
   source: 'llm' | 'rules';
 }
 
+export interface ApiHistoryPoint {
+  date: string;
+  calories_consumed: number;
+  calories_target: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  meal_count: number;
+}
+
+export interface ApiHistoryResponse {
+  days: ApiHistoryPoint[];
+}
+
+
 export interface ProfileInput {
   age: number;
   gender: Gender;
