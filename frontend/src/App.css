@@ -1253,6 +1253,24 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--stone) transparent;
+}
+
+.recommended-meals-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recommended-meals-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recommended-meals-list::-webkit-scrollbar-thumb {
+  background-color: var(--stone);
+  border-radius: 999px;
 }
 
 .recommended-meal-item {
@@ -2928,3 +2946,314 @@
   padding: 1.25rem;
   margin-bottom: 1.25rem;
 }
+
+/* =========================================
+   CUSTOM LOG CARD & TARGET REACHED BANNER
+   ========================================= */
+
+.card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.card-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  color: var(--rust);
+}
+
+.recommendation-tag {
+  color: #2e7d32;
+}
+
+.custom-log-card {
+  border-top: 3px solid var(--rust);
+}
+
+.search-entry-input {
+  font-size: 0.95rem;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--stone);
+  transition: all 0.2s ease;
+}
+
+.search-entry-input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 3px rgba(184, 80, 54, 0.12);
+}
+
+/* Autocomplete Dropdown List */
+.dropdown-food-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.dropdown-food-region {
+  font-size: 0.75rem;
+  color: var(--earth);
+  margin-top: 0.1rem;
+}
+
+.dropdown-food-macros {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.dropdown-macro-cal {
+  font-weight: 700;
+  color: var(--bark);
+  font-size: 0.88rem;
+}
+
+.dropdown-macro-sub {
+  font-size: 0.72rem;
+  color: var(--earth);
+}
+
+/* Selected Food Preview Card */
+.selected-food-preview-card {
+  background: rgba(212, 163, 115, 0.1);
+  border: 1.5px solid var(--stone);
+  border-radius: 10px;
+  padding: 1rem 1.15rem;
+  margin: 1.25rem 0;
+}
+
+.preview-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.85rem;
+}
+
+.preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.preview-badge {
+  display: inline-block;
+  width: fit-content;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--earth);
+  background: rgba(115, 87, 62, 0.1);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.preview-name {
+  font-size: 1.05rem;
+  color: var(--bark);
+}
+
+.preview-serving {
+  font-size: 0.8rem;
+  color: var(--earth);
+}
+
+.preview-macros-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.45rem;
+  text-align: center;
+  border-top: 1px solid rgba(217, 210, 197, 0.8);
+  padding-top: 0.75rem;
+}
+
+.macro-box-val {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--bark);
+}
+
+.macro-box-lbl {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02rem;
+  color: var(--earth);
+}
+
+/* Slot Pills & Stepper Row */
+.log-form-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.slot-pills-row {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.slot-pill-btn {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--stone);
+  background: var(--cream);
+  color: var(--earth);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.slot-pill-btn:hover {
+  border-color: var(--rust);
+  color: var(--bark);
+  background: var(--sand);
+}
+
+.slot-pill-btn.active {
+  background: var(--rust);
+  color: #fff;
+  border-color: var(--rust);
+}
+
+.servings-stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Target Reached Accomplishment Banner */
+.target-reached-banner {
+  background: linear-gradient(135deg, #f0f7ee, #e8f5e9);
+  border: 1.5px solid #a5d6a7;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.target-reached-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.target-reached-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04rem;
+  background: #2e7d32;
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+
+.target-reached-header h4 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: #1b5e20;
+  margin: 0;
+}
+
+.target-reached-desc {
+  font-size: 0.9rem;
+  color: #2e7d32;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.btn-toggle-snacks {
+  background: var(--warm-white);
+  border: 1.5px solid #81c784;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-snacks:hover {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.recovery-snacks-note {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--earth);
+  margin: 0.5rem 0 1rem;
+}
+
+/* Highlighted Recommendations Item */
+.highlighted-rec-item {
+  border-left: 3.5px solid #2e7d32 !important;
+}
+
+.rec-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.rec-verified-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03rem;
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.guide-step-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  color: var(--rust);
+  background: rgba(184, 80, 54, 0.08);
+  border: 1px solid var(--stone);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.85rem;
+}
+
+.feature-card-pill {
+  display: inline-block;
+  width: fit-content;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  color: var(--earth);
+  background: var(--sand);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+

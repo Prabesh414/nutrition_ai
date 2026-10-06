@@ -20,9 +20,9 @@ interface LandingProps {
 
 
 function dietBadge(food: ApiFood): string {
-  if (food.is_vegan) return '🌿 Vegan (Veg)';
-  if (food.is_vegetarian) return '🥛 Vegetarian';
-  return '🥩 Non-Veg';
+  if (food.is_vegan) return 'Vegan (Plant)';
+  if (food.is_vegetarian) return 'Vegetarian';
+  return 'Non-Vegetarian';
 }
 
 function Hero({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarted' | 'onSelectSection'>) {
@@ -124,16 +124,16 @@ const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'
 const DIET_OPTIONS = ['All', 'Vegan', 'Vegetarian', 'Non-Vegetarian'] as const;
 
 const POPULAR_SEARCH_PRESETS = [
-  { label: '🥣 Oatmeal', query: 'Oatmeal' },
-  { label: '🥟 Momos', query: 'Momos' },
-  { label: '🍜 Chowmein', query: 'Chowmein' },
-  { label: '🍛 Dal Bhat', query: 'Dal' },
-  { label: '🍗 Chicken Breast', query: 'Chicken' },
-  { label: '🥗 Tofu', query: 'Tofu' },
-  { label: '🥚 Boiled Egg', query: 'Egg' },
-  { label: '🍚 Fried Rice', query: 'Rice' },
-  { label: '🥞 Pancakes', query: 'Pancake' },
-  { label: '🥑 Avocado Toast', query: 'Toast' },
+  { label: 'Oatmeal', query: 'Oatmeal' },
+  { label: 'Momos', query: 'Momos' },
+  { label: 'Chowmein', query: 'Chowmein' },
+  { label: 'Dal Bhat', query: 'Dal' },
+  { label: 'Chicken Breast', query: 'Chicken' },
+  { label: 'Tofu', query: 'Tofu' },
+  { label: 'Boiled Egg', query: 'Egg' },
+  { label: 'Fried Rice', query: 'Rice' },
+  { label: 'Pancakes', query: 'Pancake' },
+  { label: 'Avocado Toast', query: 'Toast' },
 ];
 
 function FoodSearch({
@@ -335,17 +335,17 @@ function FoodSearch({
       ) : (
         <div className="search-placeholder-guide">
           <div className="guide-card">
-            <div className="guide-icon">🔍</div>
+            <span className="guide-step-tag">Step 1</span>
             <h3>Instant Food Lookup</h3>
             <p>Type any ingredient or dish above to view exact calories, macros, and dietary classifications.</p>
           </div>
           <div className="guide-card">
-            <div className="guide-icon">🌏</div>
+            <span className="guide-step-tag">Step 2</span>
             <h3>Cuisine Awareness</h3>
             <p>Filter foods across South Asian, East Asian, Western, and Global culinary traditions.</p>
           </div>
           <div className="guide-card">
-            <div className="guide-icon">🌱</div>
+            <span className="guide-step-tag">Step 3</span>
             <h3>Diet Transparency</h3>
             <p>Precise vegan and vegetarian labeling ensuring every meal fits your nutritional lifestyle.</p>
           </div>
@@ -358,37 +358,37 @@ function FoodSearch({
 function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetStarted' | 'onSelectSection'>) {
   const cards = [
     {
-      icon: '🎯',
+      badge: 'Nutrition',
       heading: 'Personalized Meal Suggestions',
       description:
         'Smart food ideas tailored to your physical stats, daily calorie targets, and preferred regional cuisines.',
     },
     {
-      icon: '📊',
+      badge: 'Tracking',
       heading: 'Daily Macro & Calorie Tracking',
       description:
         'Log breakfast, lunch, dinner, and snacks with live portion calculations and progress meters towards your health targets.',
     },
     {
-      icon: '💬',
+      badge: 'Coach',
       heading: 'Personal AI Nutrition Coach',
       description:
         'Chat with an intelligent nutritionist assistant that understands your profile, goals, and today\'s logged meals.',
     },
     {
-      icon: '🌏',
+      badge: 'Cuisines',
       heading: 'Authentic Regional Cuisines',
       description:
         'Explore healthy food choices across South Asian, East Asian, Western, and Global culinary traditions.',
     },
     {
-      icon: '📈',
+      badge: 'Insights',
       heading: 'Historical Insights & Calendar',
       description:
         'Review past eating habits, track daily calorie balance, and monitor long-term nutritional consistency.',
     },
     {
-      icon: '🌿',
+      badge: 'Transparency',
       heading: 'Transparent Dietary Safety',
       description:
         'Clear, unambiguous badges for Vegan (100% plant-based), Vegetarian, and Non-Vegetarian items.',
@@ -408,7 +408,7 @@ function Features({ onGetStarted, onSelectSection }: Pick<LandingProps, 'onGetSt
       <div className="cards-grid">
         {cards.map((card) => (
           <div className="feature-card" key={card.heading}>
-            <div className="card-icon" aria-hidden="true">{card.icon}</div>
+            <span className="feature-card-pill">{card.badge}</span>
             <h3 className="card-heading">{card.heading}</h3>
             <p className="card-desc">{card.description}</p>
           </div>
