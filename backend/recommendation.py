@@ -245,3 +245,235 @@ def recommend_food(
             }
         )
     return results
+
+
+def get_substitutions(
+    db: Session,
+    *,
+    food_id: int,
+    dietary_preference: str = "None",
+    k: int = 5,
+) -> list[dict]:
+    """Find healthy smart substitutions for a specific food item.
+
+    Matches alternative foods with similar macronutrient profiles and calculates
+    the proportional serving multiplier to match caloric and protein targets.
+    """
+    from backend.database import FoodItem
+
+    original = db.query(FoodItem).filter(FoodItem.id == food_id).first()
+    if original is None:
+        return []
+
+    preference = _normalise_preference(dietary_preference)
+    query = db.query(FoodItem).filter(FoodItem.id != food_id)
+    if preference == "vegetarian":
+        query = query.filter(FoodItem.is_vegetarian.is_(True))
+    elif preference == "vegan":
+        query = query.filter(FoodItem.is_vegan.is_(True))
+
+    candidates = query.all()
+    if not candidates:
+        return []
+
+    orig_cals = max(float(original.calories), 1.0)
+    orig_p = float(original.protein)
+    orig_c = float(original.carbohydrates)
+    orig_f = float(original.fat)
+
+    scored: list[dict] = []
+    for cand in candidates:
+        cand_cals = max(float(cand.calories), 1.0)
+        # Determine multiplier to approximate original calories
+        raw_mult = orig_cals / cand_cals
+        # Keep multiplier within a sensible portion range [0.25, 4.0]
+        mult = round(float(np.clip(raw_mult, 0.25, 4.0)), 2)
+
+        adj_cals = round(cand.calories * mult, 1)
+        adj_p = round(cand.protein * mult, 1)
+        adj_c = round(cand.carbohydrates * mult, 1)
+        adj_f = round(cand.fat * mult, 1)
+        adj_fib = round(cand.fiber * mult, 1)
+
+        # Macro distance penalty
+        p_diff = abs(adj_p - orig_p)
+        c_diff = abs(adj_c - orig_c)
+        f_diff = abs(adj_f - orig_f)
+        cal_diff = abs(adj_cals - orig_cals)
+
+        # Match score from 0.0 to 1.0
+        score = 1.0 / (1.0 + (cal_diff / orig_cals) + (p_diff / max(orig_p, 5.0)) + 0.5 * (c_diff / max(orig_c, 10.0)) + 0.5 * (f_diff / max(orig_f, 5.0)))
+        score = float(np.clip(score, 0.05, 0.99))
+
+        # Build informative reason
+        reason_parts = []
+        if adj_p >= orig_p and adj_p > 0:
+            diff = round(adj_p - orig_p, 1)
+            reason_parts.append(f"+{diff}g more protein" if diff > 0.5 else "Equivalent protein")
+        if adj_fib > original.fiber + 1.0:
+            reason_parts.append(f"+{round(adj_fib - original.fiber, 1)}g fiber")
+        if cand.is_vegan and not original.is_vegan:
+            reason_parts.append("100% plant-based / vegan")
+        elif cand.is_vegetarian and not original.is_vegetarian:
+            reason_parts.append("Vegetarian alternative")
+
+        reason = ", ".join(reason_parts) if reason_parts else f"Similar energy profile (~{round(adj_cals)} kcal)"
+
+        serving_label = cand.serving_size or "1 serving"
+        if mult == 1.0:
+            adj_serving = serving_label
+        else:
+            adj_serving = f"{mult}x portion ({serving_label})"
+
+        scored.append(
+            {
+                "food": {
+                    "id": cand.id,
+                    "name": str(cand.name).title(),
+                    "serving_size": str(cand.serving_size),
+                    "region": str(cand.region),
+                    "calories": float(cand.calories),
+                    "fat": float(cand.fat),
+                    "carbohydrates": float(cand.carbohydrates),
+                    "protein": float(cand.protein),
+                    "fiber": float(cand.fiber),
+                    "sugars": float(cand.sugars),
+                    "is_vegetarian": bool(cand.is_vegetarian),
+                    "is_vegan": bool(cand.is_vegan),
+                },
+                "original_food_name": str(original.name).title(),
+                "serving_multiplier": mult,
+                "adjusted_serving_size": adj_serving,
+                "adjusted_calories": adj_cals,
+                "adjusted_protein": adj_p,
+                "adjusted_carbs": adj_c,
+                "adjusted_fat": adj_f,
+                "adjusted_fiber": adj_fib,
+                "match_score": round(score, 3),
+                "reason": reason,
+            }
+        )
+
+    scored.sort(key=lambda x: x["match_score"], reverse=True)
+    return scored[:max(1, k)]
+
+
+def generate_daily_meal_plan(
+    db: Session,
+    *,
+    target_calories: float,
+    target_protein: float,
+    target_carbs: float,
+    target_fat: float,
+    target_fiber: float = 28.0,
+    dietary_preference: str = "None",
+    cuisine: Optional[str] = None,
+) -> dict:
+    """Generate a cohesive 4-meal daily plan adhering to calorie & macro goals."""
+    # Proportions: Breakfast 25%, Lunch 35%, Dinner 30%, Snack 10%
+    slot_configs = [
+        ("Breakfast", 0.25, ["oat", "egg", "pancake", "toast", "porridge", "fruit", "yogurt", "milk", "cereal", "tea", "coffee"]),
+        ("Lunch", 0.35, ["rice", "curry", "chicken", "paneer", "dal", "salad", "roti", "bowl", "fish", "quinoa", "wrap", "sandwich"]),
+        ("Dinner", 0.30, ["soup", "curry", "rice", "dal", "tofu", "fish", "chicken", "vegetable", "roti", "steak", "pasta"]),
+        ("Snack", 0.10, ["apple", "banana", "nuts", "almond", "bar", "shake", "smoothie", "seeds", "cookie", "cracker"]),
+    ]
+
+    slots_data = []
+    tot_cal = 0.0
+    tot_p = 0.0
+    tot_c = 0.0
+    tot_f = 0.0
+    tot_fib = 0.0
+
+    for slot_name, share, keywords in slot_configs:
+        slot_cal = target_calories * share
+        slot_p = target_protein * share
+        slot_c = target_carbs * share
+        slot_f = target_fat * share
+        slot_fib = target_fiber * share
+
+        candidates = recommend_food(
+            db,
+            target_calories=slot_cal,
+            target_protein=slot_p,
+            target_carbs=slot_c,
+            target_fat=slot_f,
+            target_fiber=slot_fib,
+            dietary_preference=dietary_preference,
+            cuisine=cuisine,
+            k=10,
+        )
+
+        chosen = None
+        # Try finding item matching slot theme
+        for cand in candidates:
+            cand_name_lower = cand["name"].lower()
+            if any(kw in cand_name_lower for kw in keywords):
+                chosen = cand
+                break
+        if chosen is None and candidates:
+            chosen = candidates[0]
+
+        if chosen is not None:
+            # Calibrate servings slightly to fit slot calorie target
+            item_cal = max(chosen["calories"], 1.0)
+            servings = round(max(0.5, min(3.0, slot_cal / item_cal)), 1)
+            cals = round(chosen["calories"] * servings, 1)
+            p = round(chosen["protein"] * servings, 1)
+            c = round(chosen["carbohydrates"] * servings, 1)
+            f = round(chosen["fat"] * servings, 1)
+            fib = round(chosen["fiber"] * servings, 1)
+
+            serving_lbl = chosen["serving_size"] or "1 serving"
+            adj_serving = f"{servings}x ({serving_lbl})" if servings != 1.0 else serving_lbl
+
+            item_obj = {
+                "food": chosen,
+                "servings": servings,
+                "adjusted_serving": adj_serving,
+                "calories": cals,
+                "protein": p,
+                "carbs": c,
+                "fat": f,
+                "fiber": fib,
+            }
+
+            tot_cal += cals
+            tot_p += p
+            tot_c += c
+            tot_f += f
+            tot_fib += fib
+
+            slots_data.append(
+                {
+                    "meal_type": slot_name,
+                    "target_calories": round(slot_cal, 1),
+                    "total_calories": cals,
+                    "total_protein": p,
+                    "total_carbs": c,
+                    "total_fat": f,
+                    "total_fiber": fib,
+                    "items": [item_obj],
+                }
+            )
+
+    adherence = 0.0
+    if target_calories > 0:
+        ratio = tot_cal / target_calories
+        adherence = round(max(0.0, min(100.0, (1.0 - abs(1.0 - ratio)) * 100.0)), 1)
+
+    return {
+        "target_calories": round(target_calories, 1),
+        "total_calories": round(tot_cal, 1),
+        "total_protein": round(tot_p, 1),
+        "total_carbs": round(tot_c, 1),
+        "total_fat": round(tot_f, 1),
+        "total_fiber": round(tot_fib, 1),
+        "adherence_pct": adherence,
+        "slots": slots_data,
+        "ai_tips": (
+            f"This plan delivers {round(tot_cal)} kcal ({adherence}% target match) with {round(tot_p)}g protein. "
+            "Stay hydrated throughout the day and adjust portion sizes as needed."
+        ),
+    }
+

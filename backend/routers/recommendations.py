@@ -1,17 +1,23 @@
 """Personalised recommendations for the authenticated user."""
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from backend.database import MealLog, User, get_db
+from backend.database import FoodItem, MealLog, User, get_db
 from backend.ml.lstm_model import predict_next_nutrient_target
 from backend.nutrition import DEFAULT_FIBER_TARGET_G
-from backend.recommendation import recommend_food
+from backend.recommendation import (
+    generate_daily_meal_plan,
+    get_substitutions,
+    recommend_food,
+)
 from backend.schemas import (
     DailyTargets,
+    MealPlanResponse,
     PersonalizedRecommendationsResponse,
     RecommendationResponse,
+    SubstitutionResponse,
 )
 from backend.security import get_current_user
 
@@ -102,3 +108,65 @@ def get_recommendations(
         next_meal_targets=as_targets(next_meal),
         recommendations=[RecommendationResponse(**item) for item in recommendations],
     )
+
+
+@router.get("/substitutions", response_model=SubstitutionResponse)
+def get_food_substitutions(
+    food_id: int = Query(..., description="ID of the food to find alternatives for"),
+    limit: int = Query(5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Find healthy alternative foods with equivalent energy/macros."""
+    original = db.query(FoodItem).filter(FoodItem.id == food_id).first()
+    if original is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food item not found")
+
+    dietary_preference = current_user.profile.dietary_preference if current_user.profile else "None"
+    subs = get_substitutions(
+        db,
+        food_id=food_id,
+        dietary_preference=dietary_preference or "None",
+        k=limit,
+    )
+
+    return SubstitutionResponse(
+        original_food_id=original.id,
+        original_food_name=str(original.name).title(),
+        substitutions=subs,
+    )
+
+
+@router.get("/daily-plan", response_model=MealPlanResponse)
+@router.post("/daily-plan", response_model=MealPlanResponse)
+def get_daily_meal_plan(
+    cuisine: str | None = Query(None, description="Optional cuisine preference e.g. South Asian, East Asian, Western"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a cohesive 4-meal daily nutrition plan calibrated to user goals."""
+    profile = current_user.profile
+    targets = dict(FALLBACK_TARGETS)
+    dietary_preference = "None"
+    if profile:
+        targets = {
+            "calories": profile.target_calories or FALLBACK_TARGETS["calories"],
+            "protein": profile.target_protein or FALLBACK_TARGETS["protein"],
+            "carbs": profile.target_carbs or FALLBACK_TARGETS["carbs"],
+            "fat": profile.target_fat or FALLBACK_TARGETS["fat"],
+            "fiber": DEFAULT_FIBER_TARGET_G,
+        }
+        dietary_preference = profile.dietary_preference or "None"
+
+    plan = generate_daily_meal_plan(
+        db,
+        target_calories=targets["calories"],
+        target_protein=targets["protein"],
+        target_carbs=targets["carbs"],
+        target_fat=targets["fat"],
+        target_fiber=targets["fiber"],
+        dietary_preference=dietary_preference,
+        cuisine=cuisine,
+    )
+    return plan
+
