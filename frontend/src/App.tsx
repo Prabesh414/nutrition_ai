@@ -225,6 +225,7 @@ function App() {
               onToday={dailyLog.goToToday}
               onSelectDate={dailyLog.setSelectedDate}
               onLogMeal={handleLogMeal}
+              onBatchLog={dailyLog.batchAddMeals}
               onRemoveMeal={dailyLog.removeMeal}
             />
           ) : (

@@ -42,6 +42,7 @@ export interface DailyLog {
   loadingHistory: boolean;
   error: string | null;
   addMeal: (input: MealInput) => Promise<void>;
+  batchAddMeals: (meals: MealInput[]) => Promise<void>;
   removeMeal: (mealId: number) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -126,6 +127,15 @@ export function useDailyLog(enabled: boolean): DailyLog {
     [selectedDate, refresh],
   );
 
+  const batchAddMeals = useCallback(
+    async (meals: MealInput[]) => {
+      const prepared = meals.map((m) => ({ log_date: selectedDate, ...m }));
+      await api.addBatchMeals(prepared);
+      await refresh();
+    },
+    [selectedDate, refresh],
+  );
+
   const removeMeal = useCallback(
     async (mealId: number) => {
       // No optimistic removal: a rejected delete used to fall through to the
@@ -168,6 +178,7 @@ export function useDailyLog(enabled: boolean): DailyLog {
     loadingHistory,
     error,
     addMeal,
+    batchAddMeals,
     removeMeal,
     refresh,
   };

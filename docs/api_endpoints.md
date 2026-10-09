@@ -37,11 +37,22 @@ A request with a missing, malformed or expired token returns `401`.
 | `PUT` | `/profile` | ✔ | Create or replace the health profile |
 | `GET` | `/meals` | ✔ | Meals for one calendar day |
 | `POST` | `/meals` | ✔ | Log a meal |
+| `POST` | `/meals/batch` | ✔ | Batch log multiple meals at once |
+| `POST` | `/meals/quick-log-ai` | ✔ | Parse natural language text into meal items |
 | `DELETE` | `/meals/{meal_id}` | ✔ | Delete one of *your own* meals |
 | `GET` | `/meals/summary` | ✔ | Consumed / target / remaining for a day |
 | `GET` | `/meals/history` | ✔ | Multi-day intake analytics and trends |
+| `GET` | `/meals/analytics` | ✔ | Multi-day streak, adherence, and summary stats |
+| `GET` | `/meals/export/csv` | ✔ | Export meal logs to CSV format |
+| `GET` | `/meals/export/json` | ✔ | Export meal logs to JSON format |
+| `GET` | `/water/summary` | ✔ | Hydration target, total consumed, and entries |
+| `POST` | `/water` | ✔ | Log a water intake amount (ml) |
+| `DELETE` | `/water/{water_id}` | ✔ | Delete a specific water entry |
+| `DELETE` | `/water/reset/day` | ✔ | Reset water logs for a day |
 | `GET` | `/foods` | — | Search the food catalogue |
 | `GET` | `/recommendations` | ✔ | Personalised food recommendations |
+| `GET` | `/recommendations/substitutions` | ✔ | Smart healthier food swaps with multipliers |
+| `POST` | `/recommendations/daily-plan` | ✔ | Full 4-slot day meal plan calibrated to macros |
 | `POST` | `/chat` | ✔ | Ask the nutrition coach |
 
 `GET /health` and `GET /` are unversioned liveness endpoints.
@@ -202,6 +213,100 @@ Aggregates calorie and macronutrient intake for each day in the requested window
 
 This endpoint powers the 7-day intake analytics and trend visualizations.
 
+### `GET /meals/analytics?days=14&end_date=YYYY-MM-DD` → `200`
+
+Calculates multi-day consistency metrics, active streak length, average daily calorie/protein intake, and calorie target adherence score (`0–100%`).
+
+```json
+{
+  "active_streak_days": 5,
+  "adherence_score": 85.7,
+  "logged_days_count": 6,
+  "total_days_evaluated": 7,
+  "avg_daily_calories": 1940.0,
+  "avg_daily_protein": 95.5,
+  "daily_summaries": [ ... ]
+}
+```
+
+### `POST /meals/batch` → `201`
+
+Atomically records multiple meals in a single transaction (e.g., from meal plans or quick-log parser).
+
+```json
+{
+  "meals": [
+    { "name": "Oatmeal with Almond Milk", "quantity": 1.0, "meal_type": "Breakfast", "calories": 310, "protein": 11, "carbs": 52, "fat": 6, "fiber": 7 },
+    { "name": "Boiled Eggs (2)", "quantity": 1.0, "meal_type": "Breakfast", "calories": 140, "protein": 12, "carbs": 1, "fat": 10, "fiber": 0 }
+  ],
+  "log_date": "2026-09-16"
+}
+```
+
+### `POST /meals/quick-log-ai` → `200`
+
+Parses natural language free-text describing food and portions into structured meal items using LLM (Gemini) with deterministic catalog heuristic fallback.
+
+```json
+{
+  "text": "2 boiled eggs, a cup of oatmeal, and a banana",
+  "meal_type": "Breakfast",
+  "log_date": "2026-09-16"
+}
+```
+
+Returns:
+```json
+{
+  "source": "llm",
+  "parsed_items": [
+    { "name": "Boiled Eggs", "quantity": 2.0, "meal_type": "Breakfast", "calories": 140.0, "protein": 12.0, "carbs": 1.0, "fat": 10.0, "fiber": 0.0 }
+  ],
+  "unmatched_tokens": []
+}
+```
+
+### `GET /meals/export/csv?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` → `200`
+
+Streams a downloadable CSV spreadsheet containing the authenticated user's logged meals in the specified date range.
+
+### `GET /meals/export/json?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` → `200`
+
+Exports a structured JSON backup of user meal logs and profile targets.
+
+---
+
+### `GET /water/summary?log_date=YYYY-MM-DD` → `200`
+
+Returns hydration stats for a given day (defaults to today), including dynamic target (based on body weight: `weight_kg * 35 ml`), total consumed, and breakdown of log entries.
+
+```json
+{
+  "log_date": "2026-09-16",
+  "target_ml": 2450.0,
+  "consumed_ml": 1750.0,
+  "remaining_ml": 700.0,
+  "percentage": 71.4,
+  "logs": [
+    { "id": 1, "amount_ml": 500.0, "log_date": "2026-09-16", "logged_at": "2026-09-16T08:30:00Z" }
+  ]
+}
+```
+
+### `POST /water` → `201`
+
+```json
+{ "amount_ml": 250.0, "log_date": "2026-09-16" }
+```
+
+### `DELETE /water/{water_id}` → `204`
+
+Deletes a specific water log owned by the user.
+
+### `DELETE /water/reset/day?log_date=YYYY-MM-DD` → `204`
+
+Clears all water logs for the specified day.
+
 ---
 
 ### `GET /foods?query=&region=&category=&vegetarian=&vegan=&limit=` → `200`
@@ -245,6 +350,51 @@ matches a case-insensitive name fragment with `LIKE` wildcards escaped;
 day. `similarity_score` blends macro closeness with nutrient quality and is
 bounded to `[0, 1]`; it is **not** a cosine similarity. See
 [ml_model.md](ml_model.md).
+
+### `GET /recommendations/substitutions?food_id=&food_name=&limit=3` → `200`
+
+Finds healthier, higher-protein, higher-fiber, or lower-calorie alternatives for a given food. Returns calculated portion multipliers (bounded 0.25x - 4.0x) so calorie or protein equivalence is preserved, complete with a natural explanation reason.
+
+```json
+{
+  "original_item": {
+    "name": "White Bread", "calories": 265.0, "protein": 9.0, "carbs": 49.0, "fat": 3.2, "fiber": 2.7
+  },
+  "substitutions": [
+    {
+      "name": "Whole Wheat Bread",
+      "serving_size": "1 slice",
+      "portion_multiplier": 1.0,
+      "calories": 247.0,
+      "protein": 13.0,
+      "carbs": 41.0,
+      "fat": 3.4,
+      "fiber": 7.0,
+      "reason": "Offers 159% more fiber and 44% more protein for better satiety and gut health."
+    }
+  ]
+}
+```
+
+### `POST /recommendations/daily-plan?log_date=YYYY-MM-DD` → `200`
+
+Generates a complete 4-slot daily meal plan (Breakfast: 25%, Lunch: 35%, Dinner: 30%, Snack: 10%) calibrated to the user's daily caloric and macronutrient targets.
+
+```json
+{
+  "log_date": "2026-09-16",
+  "target_calories": 2000.0,
+  "planned_calories": 1980.0,
+  "slots": [
+    {
+      "meal_type": "Breakfast",
+      "target_calories": 500.0,
+      "total_calories": 495.0,
+      "items": [ ... ]
+    }
+  ]
+}
+```
 
 ### `POST /chat` → `200`
 

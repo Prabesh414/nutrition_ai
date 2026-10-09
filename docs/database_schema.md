@@ -43,6 +43,7 @@ today.
 erDiagram
     USERS ||--o| PROFILES : "has one"
     USERS ||--o{ MEAL_LOGS : "records"
+    USERS ||--o{ WATER_LOGS : "tracks"
     FOOD_ITEMS ||..o{ MEAL_LOGS : "copied into"
 
     USERS {
@@ -87,6 +88,14 @@ erDiagram
         float carbs
         float fat
         float fiber
+        date log_date
+        timestamptz logged_at
+    }
+
+    WATER_LOGS {
+        int id PK
+        int user_id FK
+        float amount_ml
         date log_date
         timestamptz logged_at
     }
@@ -159,6 +168,18 @@ is what every query filters on; deriving it from a UTC timestamp puts evening
 meals on the wrong day. Indexed on `(user_id, log_date)`, which is the access
 pattern for every dashboard read.
 
+### `water_logs`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `SERIAL` | primary key |
+| `user_id` | `INTEGER` | foreign key to `users.id` |
+| `amount_ml` | `FLOAT` | fluid volume in milliliters (positive) |
+| `log_date` | `DATE` | the calendar day the intake counts towards |
+| `logged_at` | `TIMESTAMPTZ` | when the intake was recorded |
+
+Indexed on `(user_id, log_date)` for fast daily hydration queries.
+
 ### `food_items`
 
 Seeded from `food_dataset/FOOD-DATA-GROUP*.csv` on first startup (3,292 rows
@@ -177,7 +198,7 @@ preference filters every recommendation query.
 
 ## Cascades
 
-`profiles` and `meal_logs` both declare `ON DELETE CASCADE` against
+`profiles`, `meal_logs` and `water_logs` declare `ON DELETE CASCADE` against
 `users.id`, and the ORM relationships use `cascade="all, delete-orphan"`.
-Deleting a user removes their profile and meal history rather than leaving
-orphaned rows behind a not-null constraint.
+Deleting a user removes their profile, meal history, and hydration logs rather
+than leaving orphaned rows behind a not-null constraint.

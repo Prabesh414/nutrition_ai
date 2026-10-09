@@ -6,16 +6,23 @@
  * server trusted whatever arrived.
  */
 import type {
+  ApiAnalyticsSummary,
   ApiAuthResponse,
   ApiChatResponse,
   ApiDailySummary,
   ApiFood,
   ApiHistoryResponse,
   ApiMeal,
+  ApiMealPlanResponse,
   ApiProfile,
+  ApiQuickLogResponse,
   ApiRecommendationsResponse,
+  ApiSubstitutionResponse,
   ApiUser,
+  ApiWaterLog,
+  ApiWaterSummary,
   MealInput,
+  MealType,
   ProfileInput,
 } from './types';
 
@@ -202,6 +209,70 @@ export const api = {
     const params = new URLSearchParams({ days: String(days) });
     if (endDate) params.set('end_date', endDate);
     return request<ApiHistoryResponse>(`/meals/history?${params.toString()}`);
+  },
+
+  addBatchMeals(meals: MealInput[]): Promise<ApiMeal[]> {
+    return request<ApiMeal[]>('/meals/batch', { method: 'POST', body: { meals } });
+  },
+
+  quickLogAI(text: string, logDate?: string, mealType?: MealType): Promise<ApiQuickLogResponse> {
+    return request<ApiQuickLogResponse>('/meals/quick-log-ai', {
+      method: 'POST',
+      body: { text, log_date: logDate, meal_type: mealType },
+    });
+  },
+
+  getAnalytics(days: number = 7): Promise<ApiAnalyticsSummary> {
+    return request<ApiAnalyticsSummary>(`/meals/analytics?days=${days}`);
+  },
+
+  async downloadExport(type: 'csv' | 'json', days: number = 30): Promise<void> {
+    const token = getToken();
+    const res = await fetch(`${API_BASE_URL}/meals/export/${type}?days=${days}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(`Failed to export ${type.toUpperCase()}`, res.status);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nutrition_export_${days}d.${type}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  getWaterSummary(logDate?: string): Promise<ApiWaterSummary> {
+    return request<ApiWaterSummary>(`/water/summary${logDate ? `?log_date=${logDate}` : ''}`);
+  },
+
+  addWaterLog(amountMl: number = 250, logDate?: string): Promise<ApiWaterLog> {
+    return request<ApiWaterLog>('/water', {
+      method: 'POST',
+      body: { amount_ml: amountMl, log_date: logDate },
+    });
+  },
+
+  deleteWaterLog(waterId: number): Promise<void> {
+    return request<void>(`/water/${waterId}`, { method: 'DELETE' });
+  },
+
+  resetWaterDay(logDate?: string): Promise<void> {
+    return request<void>(`/water/reset/day${logDate ? `?log_date=${logDate}` : ''}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getSubstitutions(foodId: number, limit: number = 5): Promise<ApiSubstitutionResponse> {
+    return request<ApiSubstitutionResponse>(`/recommendations/substitutions?food_id=${foodId}&limit=${limit}`);
+  },
+
+  getDailyMealPlan(cuisine?: string): Promise<ApiMealPlanResponse> {
+    const params = new URLSearchParams();
+    if (cuisine && cuisine !== 'All') params.set('cuisine', cuisine);
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return request<ApiMealPlanResponse>(`/recommendations/daily-plan${q}`);
   },
 
   chat(message: string): Promise<ApiChatResponse> {

@@ -156,3 +156,110 @@ export interface MealInput {
   fiber?: number;
   log_date?: string;
 }
+
+export interface ApiWaterLog {
+  id: number;
+  amount_ml: number;
+  log_date: string;
+  logged_at: string | null;
+}
+
+export interface ApiWaterSummary {
+  log_date: string;
+  total_ml: number;
+  target_ml: number;
+  progress_pct: number;
+  logs: ApiWaterLog[];
+}
+
+export interface WaterInput {
+  amount_ml: number;
+  log_date?: string;
+}
+
+export interface ApiAnalyticsSummary {
+  period_days: number;
+  streak_days: number;
+  avg_calories: number;
+  avg_protein_g: number;
+  avg_carbs_g: number;
+  avg_fat_g: number;
+  avg_fiber_g: number;
+  adherence_score_pct: number;
+  days_logged: number;
+  total_meals_logged: number;
+  total_water_ml: number;
+}
+
+export interface ApiQuickLogItem {
+  name: string;
+  quantity: number;
+  meal_type: MealType;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  confidence: number;
+}
+
+export interface ApiQuickLogResponse {
+  parsed_items: ApiQuickLogItem[];
+  summary_note?: string;
+  source: 'llm' | 'heuristic';
+}
+
+export interface ApiSubstitutionItem {
+  food: ApiFood;
+  original_food_name: string;
+  serving_multiplier: number;
+  adjusted_serving_size: string;
+  adjusted_calories: number;
+  adjusted_protein: number;
+  adjusted_carbs: number;
+  adjusted_fat: number;
+  adjusted_fiber: number;
+  match_score: number;
+  reason: string;
+}
+
+export interface ApiSubstitutionResponse {
+  original_food_id: number;
+  original_food_name: string;
+  substitutions: ApiSubstitutionItem[];
+}
+
+export interface ApiMealPlanSlotItem {
+  food: ApiFood;
+  servings: number;
+  adjusted_serving: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+}
+
+export interface ApiMealPlanSlot {
+  meal_type: MealType;
+  target_calories: number;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  total_fiber: number;
+  items: ApiMealPlanSlotItem[];
+}
+
+export interface ApiMealPlanResponse {
+  target_calories: number;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  total_fiber: number;
+  adherence_pct: number;
+  slots: ApiMealPlanSlot[];
+  ai_tips?: string;
+}
+

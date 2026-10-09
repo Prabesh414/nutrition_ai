@@ -5,12 +5,19 @@ import type {
   ApiDailySummary,
   ApiFood,
   ApiHistoryPoint,
+  ApiMeal,
   ApiProfile,
   ApiRecommendation,
+  MealInput,
   MealType,
 } from '../api/types';
 import { MEAL_TYPES } from '../api/types';
+import { AnalyticsBar } from './AnalyticsBar';
 import { DateNavigator } from './DateNavigator';
+import { HydrationCard } from './HydrationCard';
+import { MealPlanModal } from './MealPlanModal';
+import { QuickLogAIModal } from './QuickLogAIModal';
+import { SubstitutionModal } from './SubstitutionModal';
 import { WeeklyTrendsChart } from './WeeklyTrendsChart';
 
 interface DashboardProps {
@@ -28,6 +35,7 @@ interface DashboardProps {
   onToday: () => void;
   onSelectDate: (date: string) => void;
   onLogMeal: (food: ApiFood, quantity: number, mealType: MealType) => Promise<void>;
+  onBatchLog?: (meals: MealInput[]) => Promise<void>;
   onRemoveMeal: (mealId: number) => Promise<void>;
 }
 
@@ -79,10 +87,14 @@ function LogMealCard({
   onLogMeal,
   selectedDate,
   isToday,
+  onOpenQuickLog,
+  onOpenSwap,
 }: {
   onLogMeal: DashboardProps['onLogMeal'];
   selectedDate: string;
   isToday: boolean;
+  onOpenQuickLog: () => void;
+  onOpenSwap: (food: ApiFood) => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ApiFood[]>([]);
@@ -138,7 +150,17 @@ function LogMealCard({
           <span className="card-tag">Custom Entry</span>
           <h3>Log from Food Database</h3>
         </div>
-        <span className="pref-badge">Choose Your Own</span>
+        <div className="card-header-right-actions">
+          <button
+            type="button"
+            className="btn-header-action btn-quicklog-action"
+            onClick={onOpenQuickLog}
+            title="Type or paste natural meal text"
+          >
+            💬 AI Quick Log
+          </button>
+          <span className="pref-badge">Choose Your Own</span>
+        </div>
       </div>
       <p className="recommendations-intro">
         Search any food item or ingredient to log custom portions for {isToday ? 'today' : selectedDate}.
@@ -201,16 +223,26 @@ function LogMealCard({
                 <strong className="preview-name">{selected.name}</strong>
                 <span className="preview-serving">Standard size: {selected.serving_size}</span>
               </div>
-              <button
-                type="button"
-                className="btn-clear-selection"
-                onClick={() => {
-                  setSelected(null);
-                  setQuery('');
-                }}
-              >
-                Clear
-              </button>
+              <div className="preview-btn-group">
+                <button
+                  type="button"
+                  className="btn-swap-food-action"
+                  onClick={() => onOpenSwap(selected)}
+                  title="Find smart substitutions for this food"
+                >
+                  🔄 Find Swaps
+                </button>
+                <button
+                  type="button"
+                  className="btn-clear-selection"
+                  onClick={() => {
+                    setSelected(null);
+                    setQuery('');
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
             </div>
 
             <div className="preview-macros-grid">
@@ -304,14 +336,35 @@ function LogMealCard({
 
 const CUISINE_OPTIONS = ['All', 'South Asian', 'East Asian', 'Western', 'Global'] as const;
 
+function mealToFood(meal: ApiMeal): ApiFood {
+  return {
+    id: meal.id,
+    name: meal.name,
+    serving_size: `${meal.quantity} serving(s)`,
+    region: 'Global',
+    calories: meal.calories,
+    protein: meal.protein,
+    carbohydrates: meal.carbs,
+    fat: meal.fat,
+    fiber: meal.fiber,
+    sugars: 0,
+    is_vegetarian: true,
+    is_vegan: false,
+  };
+}
+
 function RecommendationsCard({
   profile,
   recommendations: initialRecommendations,
   loadingRecommendations: initialLoading,
   selectedDate,
   onLogMeal,
+  onOpenMealPlan,
+  onOpenSwap,
   isLimitReached,
 }: Pick<DashboardProps, 'profile' | 'recommendations' | 'loadingRecommendations' | 'selectedDate' | 'onLogMeal'> & {
+  onOpenMealPlan: () => void;
+  onOpenSwap: (food: ApiFood) => void;
   isLimitReached?: boolean;
 }) {
   const [mealToLog, setMealToLog] = useState<ApiFood | null>(null);
@@ -357,11 +410,21 @@ function RecommendationsCard({
           <span className="card-tag recommendation-tag">Personalized</span>
           <h3>Tailored Meal Suggestions</h3>
         </div>
-        <span className="pref-badge">
-          {profile?.dietary_preference && profile.dietary_preference !== 'None'
-            ? `${profile.dietary_preference} • Goal Match`
-            : 'Goal Match'}
-        </span>
+        <div className="card-header-right-actions">
+          <button
+            type="button"
+            className="btn-header-action btn-dayplan-action"
+            onClick={onOpenMealPlan}
+            title="Generate a balanced full-day meal plan"
+          >
+            ⚡ AI Day Plan
+          </button>
+          <span className="pref-badge">
+            {profile?.dietary_preference && profile.dietary_preference !== 'None'
+              ? `${profile.dietary_preference} • Goal Match`
+              : 'Goal Match'}
+          </span>
+        </div>
       </div>
 
       {isLimitReached ? (
@@ -437,18 +500,28 @@ function RecommendationsCard({
                       <strong className="rec-name">{food.name}</strong>
                       <span className="rec-portion">Serving: {food.serving_size}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="btn-log-recommendation"
-                      onClick={() => {
-                        setMealToLog(food);
-                        setModalSlot(suggestedMealType());
-                        setModalQuantity(1);
-                      }}
-                      title={`Log ${food.name}`}
-                    >
-                      + Log Meal
-                    </button>
+                    <div className="rec-actions-btn-group">
+                      <button
+                        type="button"
+                        className="btn-swap-item"
+                        onClick={() => onOpenSwap(food)}
+                        title="Find smart substitutions for this food"
+                      >
+                        🔄 Swap
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-log-recommendation"
+                        onClick={() => {
+                          setMealToLog(food);
+                          setModalSlot(suggestedMealType());
+                          setModalQuantity(1);
+                        }}
+                        title={`Log ${food.name}`}
+                      >
+                        + Log Meal
+                      </button>
+                    </div>
                   </div>
 
                   {/* Clear nutrition tags */}
@@ -639,15 +712,46 @@ export function Dashboard({
   onToday,
   onSelectDate,
   onLogMeal,
+  onBatchLog,
   onRemoveMeal,
 }: DashboardProps) {
   const [showTrends, setShowTrends] = useState(false);
+  const [activeSwapFood, setActiveSwapFood] = useState<ApiFood | null>(null);
+  const [showMealPlanModal, setShowMealPlanModal] = useState(false);
+  const [showQuickLogModal, setShowQuickLogModal] = useState(false);
 
   const consumed = summary?.consumed ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
   const targets = summary?.targets ?? { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
   const meals = summary?.meals ?? [];
 
   const calDiff = targets.calories - consumed.calories;
+
+  const handleBatchLogInternal = async (mealsToLog: MealInput[]) => {
+    if (onBatchLog) {
+      await onBatchLog(mealsToLog);
+    } else {
+      for (const m of mealsToLog) {
+        await onLogMeal(
+          {
+            id: 0,
+            name: m.name,
+            serving_size: '1 serving',
+            region: 'Global',
+            calories: m.calories,
+            protein: m.protein,
+            carbohydrates: m.carbs,
+            fat: m.fat,
+            fiber: m.fiber || 0,
+            sugars: 0,
+            is_vegetarian: true,
+            is_vegan: false,
+          },
+          m.quantity || 1,
+          m.meal_type,
+        );
+      }
+    }
+  };
 
   return (
     <div className="dashboard-content-wrapper">
@@ -660,6 +764,9 @@ export function Dashboard({
         onToday={onToday}
         onSelectDate={onSelectDate}
       />
+
+      {/* Analytics, Streak & Export Bar */}
+      <AnalyticsBar onRefreshTrigger={meals.length} />
 
       <div className="dashboard-grid">
         <div className="dashboard-left">
@@ -762,11 +869,16 @@ export function Dashboard({
           {/* Expandable 7-Day Trends Chart */}
           {showTrends && <WeeklyTrendsChart history={history} loading={loadingHistory} />}
 
+          {/* Daily Hydration Card */}
+          <HydrationCard selectedDate={selectedDate} isToday={isToday} />
+
           {/* Log Meal Card */}
           <LogMealCard
             onLogMeal={onLogMeal}
             selectedDate={selectedDate}
             isToday={isToday}
+            onOpenQuickLog={() => setShowQuickLogModal(true)}
+            onOpenSwap={(f) => setActiveSwapFood(f)}
           />
         </div>
 
@@ -778,6 +890,8 @@ export function Dashboard({
             loadingRecommendations={loadingRecommendations}
             selectedDate={selectedDate}
             onLogMeal={onLogMeal}
+            onOpenMealPlan={() => setShowMealPlanModal(true)}
+            onOpenSwap={(f) => setActiveSwapFood(f)}
             isLimitReached={targets.calories > 0 && consumed.calories >= targets.calories}
           />
 
@@ -801,6 +915,14 @@ export function Dashboard({
                     <div className="meal-macros-summary">
                       <span className="meal-macro-pill cal-pill">{round(meal.calories)} kcal</span>
                       <button
+                        type="button"
+                        className="btn-swap-logged"
+                        onClick={() => setActiveSwapFood(mealToFood(meal))}
+                        title="Find smart healthy swaps for this meal"
+                      >
+                        🔄
+                      </button>
+                      <button
                         className="btn-remove-meal"
                         onClick={() => void onRemoveMeal(meal.id)}
                         aria-label={`Remove ${meal.name}`}
@@ -814,13 +936,40 @@ export function Dashboard({
               </div>
             ) : (
               <p className="empty-logs-text">
-                No meals logged for {isToday ? 'today' : selectedDate} yet. Use the form above to
+                No meals logged for {isToday ? 'today' : selectedDate} yet. Use the form above or AI quick log to
                 track a meal.
               </p>
             )}
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {activeSwapFood && (
+        <SubstitutionModal
+          food={activeSwapFood}
+          onClose={() => setActiveSwapFood(null)}
+          onLogSwap={onLogMeal}
+          defaultMealType={suggestedMealType()}
+        />
+      )}
+
+      {showMealPlanModal && (
+        <MealPlanModal
+          selectedDate={selectedDate}
+          onClose={() => setShowMealPlanModal(false)}
+          onBatchLog={handleBatchLogInternal}
+        />
+      )}
+
+      {showQuickLogModal && (
+        <QuickLogAIModal
+          selectedDate={selectedDate}
+          onClose={() => setShowQuickLogModal(false)}
+          onBatchLog={handleBatchLogInternal}
+          defaultMealType={suggestedMealType()}
+        />
+      )}
     </div>
   );
 }
