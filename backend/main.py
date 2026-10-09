@@ -17,7 +17,7 @@ from backend.config import (
 )
 from backend.database import SessionLocal, create_tables
 from backend.food_data import seed_food_items
-from backend.routers import auth, chat, foods, meals, profile, recommendations
+from backend.routers import auth, chat, foods, meals, profile, recommendations, water
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-for module in (auth, profile, meals, foods, recommendations, chat):
+for module in (auth, profile, meals, foods, recommendations, chat, water):
     app.include_router(module.router, prefix=API_PREFIX)
 
 

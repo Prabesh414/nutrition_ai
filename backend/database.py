@@ -43,6 +43,9 @@ class User(Base):
     meals: Mapped[list["MealLog"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    water_logs: Mapped[list["WaterLog"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     @property
     def display_name(self) -> str:
@@ -100,6 +103,20 @@ class MealLog(Base):
     user: Mapped[User] = relationship(back_populates="meals")
 
     __table_args__ = (Index("ix_meal_logs_user_date", "user_id", "log_date"),)
+
+
+class WaterLog(Base):
+    __tablename__ = "water_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    amount_ml: Mapped[float] = mapped_column(Float, default=250.0)
+    log_date: Mapped[date] = mapped_column(Date, nullable=False, default=date.today, index=True)
+    logged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped[User] = relationship(back_populates="water_logs")
+
+    __table_args__ = (Index("ix_water_logs_user_date", "user_id", "log_date"),)
 
 
 class FoodItem(Base):

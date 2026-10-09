@@ -41,11 +41,12 @@ def _database():
 @pytest.fixture(autouse=True)
 def _clean_user_tables():
     """Truncate user-owned tables between tests; the food catalogue persists."""
-    from backend.database import MealLog, Profile, User
+    from backend.database import MealLog, Profile, User, WaterLog
 
     yield
     db = SessionLocal()
     try:
+        db.query(WaterLog).delete()
         db.query(MealLog).delete()
         db.query(Profile).delete()
         db.query(User).delete()

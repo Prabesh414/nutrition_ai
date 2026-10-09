@@ -4,7 +4,7 @@ Every inbound field is bounded. Derived values (BMI, BMR, macro targets) are
 response-only: the server computes them from the profile so a client cannot
 store arbitrary nutrition targets.
 """
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -211,3 +211,122 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     source: Literal["llm", "rules"]
+
+
+class WaterLogCreate(BaseModel):
+    amount_ml: Annotated[float, Field(gt=0, le=5000)] = 250.0
+    log_date: Optional[date] = None
+
+
+class WaterLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    amount_ml: float
+    log_date: date
+    logged_at: Optional[datetime] = None
+
+
+class WaterSummaryResponse(BaseModel):
+    log_date: date
+    total_ml: float
+    target_ml: float
+    progress_pct: float
+    logs: list[WaterLogResponse]
+
+
+class BatchMealLogCreate(BaseModel):
+    meals: Annotated[list[MealLogCreate], Field(min_length=1, max_length=50)]
+
+
+class QuickLogAIRequest(BaseModel):
+    text: Annotated[str, Field(min_length=1, max_length=1000)]
+    log_date: Optional[date] = None
+    meal_type: Optional[MealType] = None
+
+
+class QuickLogItemResponse(BaseModel):
+    name: str
+    quantity: float = 1.0
+    meal_type: MealType = "Breakfast"
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
+    fiber: float
+    confidence: float = 1.0
+
+
+class QuickLogAIResponse(BaseModel):
+    parsed_items: list[QuickLogItemResponse]
+    summary_note: Optional[str] = None
+    source: Literal["llm", "heuristic"]
+
+
+class SubstitutionItemResponse(BaseModel):
+    food: FoodResponse
+    original_food_name: str
+    serving_multiplier: float
+    adjusted_serving_size: str
+    adjusted_calories: float
+    adjusted_protein: float
+    adjusted_carbs: float
+    adjusted_fat: float
+    adjusted_fiber: float
+    match_score: float
+    reason: str
+
+
+class SubstitutionResponse(BaseModel):
+    original_food_id: int
+    original_food_name: str
+    substitutions: list[SubstitutionItemResponse]
+
+
+class MealPlanSlotItem(BaseModel):
+    food: FoodResponse
+    servings: float
+    adjusted_serving: str
+    calories: float
+    protein: float
+    carbs: float
+    fat: float
+    fiber: float
+
+
+class MealPlanSlot(BaseModel):
+    meal_type: MealType
+    target_calories: float
+    total_calories: float
+    total_protein: float
+    total_carbs: float
+    total_fat: float
+    total_fiber: float
+    items: list[MealPlanSlotItem]
+
+
+class MealPlanResponse(BaseModel):
+    target_calories: float
+    total_calories: float
+    total_protein: float
+    total_carbs: float
+    total_fat: float
+    total_fiber: float
+    adherence_pct: float
+    slots: list[MealPlanSlot]
+    ai_tips: Optional[str] = None
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    period_days: int
+    streak_days: int
+    avg_calories: float
+    avg_protein_g: float
+    avg_carbs_g: float
+    avg_fat_g: float
+    avg_fiber_g: float
+    adherence_score_pct: float
+    days_logged: int
+    total_meals_logged: int
+    total_water_ml: float
+
