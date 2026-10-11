@@ -86,7 +86,12 @@ def _protein_sources(dietary_preference: Optional[str]) -> str:
     return "Lentils, paneer, tofu, eggs, fish and chicken are all efficient ways to reach it."
 
 
-def rule_based_reply(message: str, profile: Optional[dict], consumed: Optional[dict]) -> str:
+def rule_based_reply(
+    message: str,
+    profile: Optional[dict],
+    consumed: Optional[dict],
+    display_name: Optional[str] = None,
+) -> str:
     """Deterministic fallback answers keyed on a few common intents."""
     lower = message.lower()
 
@@ -210,4 +215,4 @@ def generate_reply(
     reply = _llm_reply(message, context)
     if reply:
         return reply, "llm"
-    return rule_based_reply(message, profile, consumed), "rules"
+    return rule_based_reply(message, profile, consumed, display_name=display_name), "rules"
